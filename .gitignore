@@ -1,0 +1,6 @@
+# Datasets and run outputs stay local (tens of thousands of images; the datasets have their own licences)
+data/
+outputs/
+
+# Written by exp-tuning.ipynb on each run
+extract_landmarks.py
