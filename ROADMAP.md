@@ -33,14 +33,25 @@ is **parked** (see the end of this file). Ultrasound details are logged in `US_P
 
 ### M2: Rerun FER and record the honest baseline
 - [x] Make training resumable across Kaggle's 12-hour sessions (2026-09-30; see `PROGRESS_LOG.md`)
-- [ ] Run the fixed `exp-tuning.ipynb` to completion. On Kaggle this means resuming session by session; on
-      the desktop it's a single run of roughly 2–5 h once the local mode (E1) exists.
-- [ ] Record the results below and in `PROGRESS_LOG.md`
+- [x] Run the fixed `exp-tuning.ipynb` to completion (results reported 2026-10-01)
+- [x] Record the test results below and in `PROGRESS_LOG.md`. TTA, cross-dataset accuracy and runtime were
+      not reported yet.
 
 | Run | Test acc | Macro-F1 | Macro AUC | TTA acc | Cross-dataset acc | Runtime |
 |---|---|---|---|---|---|---|
 | Original (`exp-tuning_original.ipynb`, **inflated**, see log) | 0.748 | 0.73 | 0.947 | 0.749 | 0.688 | ~6.5 h |
-| Fixed | | | | | | |
+| Fixed (corrected baseline, reported 2026-10-01) | 0.72 | 0.67 | 0.933 | not reported | not reported | not reported |
+
+### M2b: Face-geometry ablation (FER)
+Fear (F1 0.46), disgust (0.56) and sad (precision 0.56) are the weak classes. This milestone tests whether
+facial-landmark geometry, added as a third capsule, helps them. The write-up is a paper-style draft:
+[Geometry-Aware Capsule Fusion for Facial Expression Recognition](https://claude.ai/code/artifact/f3627e41-a21a-4b65-9685-6fd2c76d47ae).
+- [x] Geometry branch, two-arm switch and ablation cell implemented and tested locally (2026-10-02; see
+      `PROGRESS_LOG.md`)
+- [ ] Baseline arm: reuse the finished corrected-baseline checkpoint (evaluation only, about 30 min), or retrain
+- [ ] Geometry arm: train (estimated 2.5–5.5 h on the RTX 4080 Super)
+- [ ] Run the ablation cell and fill the results table in the paper draft
+- [ ] If a difference is within about 2 points, confirm with 3 seeds per arm
 
 ## Compute: desktop RTX 4080 Super (planned, later)
 
@@ -57,6 +68,8 @@ is **parked** (see the end of this file). Ultrasound details are logged in `US_P
   - Detect Kaggle vs desktop and point data paths at a local data folder (datasets downloaded with
     `kagglehub` or from their sites).
   - Resume stays available but isn't needed: there's no 12-hour limit.
+  - Done for `exp-tuning.ipynb` (2026-10-02): it detects Kaggle vs desktop and uses `./data`, `./outputs` and
+    `./scratch` locally, with no time budget on the desktop. The other notebooks are still Kaggle-only.
 - [ ] **Optional mixed precision** (FP16 on the tensor cores): about 2× faster and half the memory. Keep
       the loss and the capsule "squash" in float32.
 
@@ -179,6 +192,10 @@ Kept in case the trauma track resumes. Details are in the archive section of `US
 | 2026-09-30 | Video architecture = existing frame encoder + Transformer Refinement Block across frames | Keeps every custom component; the refinement block is already a transformer with positional embeddings |
 | 2026-09-30 | Train on the desktop RTX 4080 Super (WSL2), later | No 12-hour limit; 16 GB is enough at 112 px or with mixed precision |
 | 2026-09-30 | EchoNet-Dynamic at its native 112 px | Upscaling to 224 px adds ~4× compute and no information |
+| 2026-10-02 | FER: add facial-landmark geometry as a third capsule; skip the cheaper per-class bias adjustment | User's choice: test the geometry idea directly |
+| 2026-10-02 | Landmarks from MediaPipe Face Landmarker 1.0.1, run in its own process and package folder | It needs numpy 2.4; TensorFlow 2.19 needs numpy below 2.2 |
+| 2026-10-02 | Measure each face on the image and its mirror image, and average | Detector jitter on 48×48 faces made asymmetry measurements unreliable (correlation 0.14–0.72) |
+| 2026-10-02 | Each ablation arm keeps its own checkpoint folder; the baseline may reuse the finished run | The arms must never resume from each other; old checkpoints load exactly into the new code |
 
 ## Risks
 

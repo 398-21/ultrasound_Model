@@ -4,6 +4,77 @@ Newest entry first. Each Kaggle run gets its own entry (template at the bottom).
 
 ---
 
+## 2026-10-02: Face-geometry branch (third capsule) and ablation added. Status: ready to train
+
+Paper-style write-up (method, setup, checks, time estimates; results table to fill):
+[Geometry-Aware Capsule Fusion for Facial Expression Recognition](https://claude.ai/code/artifact/f3627e41-a21a-4b65-9685-6fd2c76d47ae)
+
+### What changed in `exp-tuning.ipynb` (19 → 26 cells)
+| Part | Change |
+|---|---|
+| Settings cell (new) | `USE_GEOMETRY` picks the arm (`baseline` / `geometry`); Kaggle vs desktop detected automatically; all paths in one place (`./data`, `./outputs`, `./scratch` on the desktop) |
+| Landmark script (new, `%%writefile extract_landmarks.py`) | MediaPipe Face Landmarker on every preprocessed image and on its mirror image; black border 50% → 25% → none; one CSV row per image with found flags and 61 landmark positions |
+| Face geometry cell (new) | Installs MediaPipe 1.0.1 into its own folder (it needs numpy 2.4, TensorFlow 2.19 needs < 2.2) and runs the script as a separate process; 34 scale-free, mirror-symmetric measurements, the two detections averaged; standardised on the training split, clipped to ±5, plus a found flag; prints coverage per class, detection agreement and class means |
+| Capsule fusion block | Takes any number of branches (`num_inputs`); with 2 it is the original block with the same layer names |
+| MixUp | Mixes every model input with the same λ and pairs |
+| Model | Optional `geometry_input` → Dense 128 → Dropout 0.2 → Dense 256 → third capsule |
+| Data | `GeometrySequence` wraps the directory iterators so each batch carries images + geometry; augmented copies use their source image's vector |
+| Checkpoints | One folder per arm (`checkpoints/`, `checkpoints_geometry/`); `latest.json` found anywhere under the inputs, the other arm's skipped; no time budget on the desktop |
+| Evaluation | Per-image test and cross-dataset predictions saved as `predictions_<arm>_{test,cross}.npz` |
+| Ablation cell (new) | Per-class F1, macro-F1 and accuracy for both arms, the difference with a 95% paired bootstrap CI (2,000 resamples), macro-F1 split by face found / not found, and a plot |
+
+### Checks (local: TensorFlow 2.19.1 + tf-keras 2.19.0 + transformers 4.57.6, CPU)
+- **Landmark script and measurements on 400 Olivetti faces at FER resolution** (48×48, then CLAHE at 224):
+  - 99.4% of images detected: every face, none of 5 noise images.
+  - Averaged measurements exactly mirror-symmetric, and unchanged by rotation, scaling and shifting.
+  - A synthetic smile and frown moved `corner_lift` by +0.10 and −0.10 eye distances.
+- **Detection agreement (image vs mirror image):** 29 of 34 measurements agreed closely (correlation 0.86–0.98).
+  `eye_asymmetry` 0.14, `brow_asymmetry` 0.37, `corner_asymmetry` 0.51, `mouth_shift` 0.66 and `brow_gap` 0.72
+  did not, which is why the two detections are averaged.
+- **Checkpoint compatibility:** a checkpoint saved by the previous notebook code loads into the new two-branch
+  model with all 113 weight tensors identical. The finished corrected-baseline run can therefore serve as the
+  baseline arm.
+- **End to end:** the whole notebook ran three times on a small FER-shaped dataset of real faces plus noise
+  images, with a tiny ViT and VGG16 without ImageNet weights.
+  1. The baseline trained both phases and saved its predictions.
+  2. The geometry arm found landmarks for 95–100% of each set, built 2 inputs and 3 capsules, trained,
+     skipped the baseline's checkpoint and produced both ablation tables.
+  3. A baseline rerun loaded its finished checkpoint and only evaluated.
+- **Not verified:** full-size GPU training, landmark coverage on the real FER images, the result itself.
+
+### How to run (desktop, RTX 4080 Super)
+1. **Baseline arm:** `USE_GEOMETRY = False`. To skip retraining, put the finished corrected-baseline
+   `checkpoints/` folder anywhere under `./data`; the run then only evaluates (about 30 min). Otherwise
+   retraining takes 2.5–5.5 h.
+2. **Geometry arm:** `USE_GEOMETRY = True`. The first run needs internet: MediaPipe (about 330 MB) and the
+   3.7 MB model. Landmark detection takes 6–15 min once; training 2–5 h; total 2.5–5.5 h.
+3. **Compare:** the last cell compares the arms. Copy its table into the paper draft's results section.
+
+---
+
+## 2026-10-01: Corrected baseline results (reported)
+
+The fixed `exp-tuning.ipynb` (M1 corrections, resumable training) gave on the untouched test set
+(10,245 images): **accuracy 0.72, macro-F1 0.67, macro ROC AUC 0.933**.
+
+| Class | Precision | Recall | F1 | Support |
+|---|---|---|---|---|
+| angry | 0.66 | 0.58 | 0.62 | 1,119 |
+| disgust | 0.67 | 0.48 | 0.56 | 271 |
+| fear | 0.61 | 0.37 | 0.46 | 1,098 |
+| happy | 0.93 | 0.88 | 0.90 | 2,959 |
+| neutral | 0.68 | 0.73 | 0.70 | 1,913 |
+| sad | 0.56 | 0.71 | 0.63 | 1,725 |
+| surprise | 0.74 | 0.86 | 0.79 | 1,160 |
+
+- The supports match the natural test set, so the leakage fix worked. Disgust F1 fell from the inflated
+  0.85 to 0.56.
+- Weakest: fear is mostly missed (recall 0.37), disgust half missed (0.48), and sad collects other classes'
+  faces (precision 0.56).
+- Not reported yet: TTA accuracy, cross-dataset accuracy, epochs/sessions used, runtime, confusion matrix.
+
+---
+
 ## 2026-09-30: Training resumes across Kaggle sessions (12-hour limit); environment check fixed
 
 ### Why
