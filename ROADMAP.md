@@ -32,7 +32,8 @@ is **parked** (see the end of this file). Ultrasound details are logged in `US_P
 - [x] Clean up: explicit layer names, weight-only checkpoints, single predict pass, pinned `transformers<5`
 
 ### M2: Rerun FER and record the honest baseline
-- [x] Make training resumable across Kaggle's 12-hour sessions (2026-09-30; see `PROGRESS_LOG.md`)
+- [x] Make training resumable across Kaggle's 12-hour sessions (2026-09-30; removed 2026-10-02 because training
+      moved to the desktop)
 - [x] Run the fixed `exp-tuning.ipynb` to completion (results reported 2026-10-01)
 - [x] Record the test results below and in `PROGRESS_LOG.md`. TTA, cross-dataset accuracy and runtime were
       not reported yet.
@@ -48,7 +49,10 @@ facial-landmark geometry, added as a third capsule, helps them. The write-up is 
 [Geometry-Aware Capsule Fusion for Facial Expression Recognition](https://claude.ai/code/artifact/f3627e41-a21a-4b65-9685-6fd2c76d47ae).
 - [x] Geometry branch, two-arm switch and ablation cell implemented and tested locally (2026-10-02; see
       `PROGRESS_LOG.md`)
-- [ ] Baseline arm: reuse the finished corrected-baseline checkpoint (evaluation only, about 30 min), or retrain
+- [x] Notebook simplified for the desktop: requirements and install cell at the top; checkpoints and the Kaggle
+      session limit removed (2026-10-02)
+- [ ] Baseline arm: reuse the corrected baseline's final weights with `PRETRAINED_WEIGHTS` (evaluation only, about
+      30 min), or retrain
 - [ ] Geometry arm: train (estimated 2.5–5.5 h on the RTX 4080 Super)
 - [ ] Run the ablation cell and fill the results table in the paper draft
 - [ ] If a difference is within about 2 points, confirm with 3 seeds per arm
@@ -68,8 +72,10 @@ facial-landmark geometry, added as a third capsule, helps them. The write-up is 
   - Detect Kaggle vs desktop and point data paths at a local data folder (datasets downloaded with
     `kagglehub` or from their sites).
   - Resume stays available but isn't needed: there's no 12-hour limit.
-  - Done for `exp-tuning.ipynb` (2026-10-02): it detects Kaggle vs desktop and uses `./data`, `./outputs` and
-    `./scratch` locally, with no time budget on the desktop. The other notebooks are still Kaggle-only.
+  - Done for `exp-tuning.ipynb` (2026-10-02). It detects Kaggle vs desktop. On the desktop it uses `data/` and
+    `outputs/` next to the notebook and `~/fer_scratch` for rebuilt images (on WSL keep that on the Linux side,
+    not `/mnt/c`), with no time budget. All of these are editable in the settings cell's desktop block. The
+    other notebooks are still Kaggle-only.
 - [ ] **Optional mixed precision** (FP16 on the tensor cores): about 2× faster and half the memory. Keep
       the loss and the capsule "squash" in float32.
 
@@ -195,13 +201,14 @@ Kept in case the trauma track resumes. Details are in the archive section of `US
 | 2026-10-02 | FER: add facial-landmark geometry as a third capsule; skip the cheaper per-class bias adjustment | User's choice: test the geometry idea directly |
 | 2026-10-02 | Landmarks from MediaPipe Face Landmarker 1.0.1, run in its own process and package folder | It needs numpy 2.4; TensorFlow 2.19 needs numpy below 2.2 |
 | 2026-10-02 | Measure each face on the image and its mirror image, and average | Detector jitter on 48×48 faces made asymmetry measurements unreliable (correlation 0.14–0.72) |
-| 2026-10-02 | Each ablation arm keeps its own checkpoint folder; the baseline may reuse the finished run | The arms must never resume from each other; old checkpoints load exactly into the new code |
+| 2026-10-02 | Each ablation arm keeps its own checkpoint folder; the baseline may reuse the finished run | The arms must never resume from each other; old checkpoints load exactly into the new code (superseded the same day: checkpoints removed) |
+| 2026-10-02 | Remove checkpoints and Kaggle session-limit handling from `exp-tuning.ipynb`; add a requirements section | Training moves to the desktop with no time limit; a finished run's final weights are reused with `PRETRAINED_WEIGHTS` instead |
 
 ## Risks
 
 | Risk | Mitigation |
 |---|---|
-| Kaggle 12 h session limit | Full-state checkpoint every epoch with resume (tested locally); the desktop has no limit |
+| Kaggle 12 h session limit | Train on the desktop, which has no limit. Resume support was removed on 2026-10-02, so a Kaggle run must now finish within 12 h |
 | `transformers` v5 dropped TensorFlow (`TFViTModel`) | Pin `transformers<5`; run on tf-keras |
 | TensorFlow has no GPU support on native Windows after 2.10 | Train under WSL2 (E1) |
 | Small medical datasets vs a ~100M-parameter model → overfitting | Two-phase unfreezing, frozen-feature phase for video, strong regularisation, patient-wise CV, report CIs; watch phase-2 validation loss |

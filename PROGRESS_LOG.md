@@ -4,6 +4,51 @@ Newest entry first. Each Kaggle run gets its own entry (template at the bottom).
 
 ---
 
+## 2026-10-02 (later): Desktop-only training: checkpoints and session limit removed; requirements at the top
+
+### Why
+Training moves to the desktop (RTX 4080 Super), which has no 12-hour limit, so the resume machinery was dead weight.
+
+### What changed in `exp-tuning.ipynb` (26 → 25 cells)
+- **New first cell (markdown):** requirements.
+  - OS: Linux, or Windows 11 with WSL2. Python 3.10–3.12. NVIDIA GPU. About 15 GB disk. Internet on the first run.
+  - A pip list and the terminal setup commands.
+- **Install cell** (replaces the old `!pip install transformers` cell):
+  - Checks the Python version and installs any missing requirements.
+  - On Kaggle it only pins `transformers<5`.
+- **Removed:**
+  - The session clock (`SESSION_START`), the 11-hour budget, the "Training across Kaggle sessions" notes and
+    the whole checkpointing cell (`SessionCheckpoint`, resumable callbacks, `latest.json`, per-arm checkpoint
+    folders).
+  - The "training not finished" branches in the main run and the cross-dataset test.
+- **Training cell:**
+  - The plain two-phase schedule, with standard `EarlyStopping` and `ReduceLROnPlateau` (same settings as before).
+  - It saves the final weights once, as `outputs/vgg16_cbam_vit_<arm>`.
+- **New setting `PRETRAINED_WEIGHTS`:**
+  - Points at a finished run's final weights (path without `.index`); training is then skipped and the model
+    is only evaluated.
+  - This is how the baseline arm reuses the Kaggle run: put `vgg16_cbam_vit_incremental_unfreeze_improved.index`
+    and `.data-00000-of-00001` in `data/baseline_run/`.
+  - Training curves are skipped in that case.
+- **Environment cell:** warns when no GPU is found.
+
+### Checks
+- **Requirement list:** resolves on Linux x86-64 for Python 3.10 and 3.12, checked with `uv` for that platform.
+  Resolved versions: TensorFlow 2.19.1, tf-keras 2.19.0, transformers 4.57.6, numpy 2.1.3, CUDA 12.5 / cuDNN 9.3.
+  - A plain `pip --platform` dry run from Windows reports a false conflict: it evaluates TensorFlow's
+    Windows-only dependency marker against the host.
+- **Weight compatibility:** final weights saved the way the 2026-09-30 notebook saved them (after phase-2
+  training, optimizer state included) load through `PRETRAINED_WEIGHTS` with all 113 weight tensors identical.
+  Predict and evaluate work on the loaded model.
+- **End to end:** the whole notebook ran three times on the small real-face test set, with a tiny ViT and VGG16
+  without ImageNet weights, on CPU.
+  1. The baseline trained both phases and saved its final weights.
+  2. The geometry arm trained with 2 inputs and 3 capsules and produced both ablation tables.
+  3. The baseline from `PRETRAINED_WEIGHTS` skipped training, evaluated and recomputed the ablation.
+  - No checkpoint folders are created any more.
+
+---
+
 ## 2026-10-02: Face-geometry branch (third capsule) and ablation added. Status: ready to train
 
 Paper-style write-up (method, setup, checks, time estimates; results table to fill):
@@ -12,7 +57,7 @@ Paper-style write-up (method, setup, checks, time estimates; results table to fi
 ### What changed in `exp-tuning.ipynb` (19 → 26 cells)
 | Part | Change |
 |---|---|
-| Settings cell (new) | `USE_GEOMETRY` picks the arm (`baseline` / `geometry`); Kaggle vs desktop detected automatically; all paths in one place (`./data`, `./outputs`, `./scratch` on the desktop) |
+| Settings cell (new) | `USE_GEOMETRY` picks the arm (`baseline` / `geometry`); Kaggle vs desktop detected automatically; all paths in one place. Desktop defaults: `data/` and `outputs/` next to the notebook, scratch in `~/fer_scratch`, editable in one block; prints the classes and file counts found |
 | Landmark script (new, `%%writefile extract_landmarks.py`) | MediaPipe Face Landmarker on every preprocessed image and on its mirror image; black border 50% → 25% → none; one CSV row per image with found flags and 61 landmark positions |
 | Face geometry cell (new) | Installs MediaPipe 1.0.1 into its own folder (it needs numpy 2.4, TensorFlow 2.19 needs < 2.2) and runs the script as a separate process; 34 scale-free, mirror-symmetric measurements, the two detections averaged; standardised on the training split, clipped to ±5, plus a found flag; prints coverage per class, detection agreement and class means |
 | Capsule fusion block | Takes any number of branches (`num_inputs`); with 2 it is the original block with the same layer names |
