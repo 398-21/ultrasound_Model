@@ -1,0 +1,11 @@
+# Datasets and run outputs stay local (size and licences); the root .gitignore also ignores any data/ and outputs/
+data/
+outputs/
+
+# Weights and caches
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+__pycache__/
+.ipynb_checkpoints/
