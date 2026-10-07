@@ -1,0 +1,39 @@
+# Stage 2 baseline: the FER hybrid (VGG16+CBAM, ViT-B/16, capsule fusion, transformer refinement) with ArcFace.
+# Run from the epills folder:  .venv\Scripts\python scripts\train_stage2.py --config configs\stage2_baseline.yaml
+name: stage2_baseline
+seed: 2026
+
+data:
+  manifest: data/processed/c3pi_splits/manifest.csv
+  images: data/interim/c3pi/crops/images
+  workers: 12
+
+model:
+  embedding_dim: 256
+  refine_pool: mean        # mean = the FER block; concat = 4 tokens x 64 without pooling (ablation)
+  aux_heads: true          # shape and colour heads (the plan's lambda_1, lambda_2)
+
+loss:
+  metric: arcface          # arcface or triplet (E4)
+  arcface_margin: 0.3
+  arcface_scale: 32
+  triplet_margin: 0.2
+  lambda_shape: 0.2
+  lambda_colour: 0.2
+
+augment:
+  colour_jitter: 0.05      # keep small: colour identifies pills (E4 ablation: 0, 0.05, 0.1, 0.2)
+
+# The FER schedule: phase 1 with the ViT and VGG16 blocks 1-3 frozen, phase 2 with everything trainable.
+# lr is for the pretrained backbones (VGG16, ViT); head_lr for the new parts (CBAM, fusion, refinement, heads, ArcFace).
+phases:
+  - {phase: 1, epochs: 25, p: 32, k: 4, lr: 3.0e-5, head_lr: 1.0e-3}
+  - {phase: 2, epochs: 35, p: 16, k: 4, lr: 1.0e-5, head_lr: 1.0e-4}
+weight_decay: 1.0e-3
+plateau: {factor: 0.5, patience: 3, min_lr: 1.0e-6}   # ReduceLROnPlateau, as in FER
+early_stopping_patience: 6                           # per phase; the best epoch's weights are restored
+select_metric: top1_all                              # higher is better; computed on val_enrolled
+
+eval:
+  k_enrol: 3        # enrolment photos per medication (the plan: 3-5)
+  batch: 128

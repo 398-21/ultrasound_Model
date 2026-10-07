@@ -32,9 +32,14 @@ Last checked: 2026-10-06.
     GAP 81.20, MAP@1 92.01, GAP@1 91.19.
 - **Pill identity:** `label_code_id` (labeler) + `prod_code_id` (product) → NDC9. 147 pill types share an NDC9
   with another type.
-- **Open:**
-  - [ ] Which of the 5 fold files is the official holdout (check the repo's training code).
-  - [ ] Whether the published numbers use one side or both sides per query.
+- **Downloaded on the desktop too** (2026-10-07), with `scripts/download_small_sources.py`: SHA-256 matches,
+  unzipped to `data/raw/epillid/ePillID_data/`.
+- **Answered (2026-10-07, from the ePillID source code):**
+  - [x] The official holdout is **fold 4** (`..._5folds_4.csv`, 745 consumer images, 192 pill types).
+    `train_cv.py` holds out the last sorted fold; the defaults in `arguments.py` and `params.json` agree.
+  - [x] The published numbers are **two-sided**. Each query is a front + back pair of consumer photos of one pill
+    type, scored by the mean of both sides' similarity to that type's closest reference. Single-side metrics
+    are logged with `f_`/`b_`/`s_` prefixes. Details in ROADMAP §1.3.
 
 ## NLM C3PI (main training set)
 - **Source:** <https://data.lhncbc.nlm.nih.gov/public/Pills/index.html>. The files are dated 2024-08-28; the
@@ -46,10 +51,22 @@ Last checked: 2026-10-06.
   - `directory_consumer_grade_images.txt`: `|`-delimited, with fields NDC11, part, path, image type, name.
   - `rximage.zip` (7.3 GB): reference images in 6 resolutions, plus RxImage API metadata.
   - `sampleData.zip` (0.5 GB).
+- **Download:** `python scripts/download_c3pi.py` (from `epills/`; standard-library Python, resumable).
+  - Order: metadata first, then the reference images, then the consumer photos in rounds (one per pill type,
+    then a second, ...).
+  - Every image is checked against the SHA-1 in its disc's XML before it is kept.
+  - Outputs: `data/interim/c3pi/download_manifest.csv`, `download_summary.json`, and `download_failures.csv` if
+    anything failed.
+  - Options: `--limit N`, `--metadata-only`, `--with-rximage`, `--verify`.
 - **Local copies:**
-  - `data/raw/c3pi/meta/directory_consumer_grade_images.txt` (133,774 rows). SHA-256
-    `69ac367991b2cfa204219e5bd3fd7016f2be280771a5517d4fbc3cfe56b84302`.
-  - `data/raw/c3pi/ALLXML/PillProjectDisc10.xml`, one example.
+  - Laptop (2026-10-06): `meta/directory_consumer_grade_images.txt` and `ALLXML/PillProjectDisc10.xml` only.
+  - Desktop (2026-10-06, via the script): `data/raw/c3pi/`.
+    - `meta/`: AAREADME, README, the directory, the reference-image list, RxImageImageLayouts.docx and
+      rximage.MD5.
+    - `ALLXML/`: all 110 disc XMLs, 125 MB.
+    - `images/<disc>/images/<file>`: the selected images.
+  - The directory (133,774 rows) has SHA-256 `69ac367991b2cfa204219e5bd3fd7016f2be280771a5517d4fbc3cfe56b84302`
+    on both machines.
 
 **Size by image type**, from the directory joined with the 110 disc listings. The whole archive is 2.72 TB.
 
@@ -65,8 +82,13 @@ Last checked: 2026-10-06.
 | `C3PI_Test` | WMV (video) | 2,503 | 30.8 | — | Skip |
 | `C3PI_Test` | PNG | 159 | 2.7 | — | Skip |
 
+- **Repeated lines:** 295 of the 40,882 `C3PI_Test` JPG lines in the directory repeat an earlier line exactly
+  (same NDC11, part and file).
+  - So there are **40,587 distinct consumer photos (83.4 GB)**.
+  - All selected images together: **49,703 files, 88.3 GB**, each with a SHA-1 in `ALLXML`.
 - **Photos per pill type** (`C3PI_Test` JPG): minimum 3, median 15, 90th percentile 30, maximum 101.
-  2,389 of 2,394 types have ≥ 4, so P×K with K = 4 works.
+  2,389 of 2,394 types have ≥ 4, so P×K with K = 4 works. Counted by NDC11 + part instead, there are 2,432
+  types, with a minimum of 2.
 - **What a consumer photo looks like:** one pill, centred on a plain background (paper, laminate, …) and small
   in the frame; e.g. a capsule about 20% of the width of a 2560×1920 photo. Each photo needs a crop.
 - **Metadata per image** (`ALLXML`, checked on disc 10):
@@ -86,9 +108,24 @@ Last checked: 2026-10-06.
 - **Attribute coverage for ePillID:** 2,483 of the 4,902 ePillID pill types have an NDC9 somewhere in C3PI, and
   so get C3PI metadata. That includes all 960 consumer types.
 - **Open:**
-  - [ ] Download script: selective, resumable, checked against SHA-1. Download `ALLXML` first.
-  - [ ] Parse all of `ALLXML` into one table; check how complete the attribute fields are.
-  - [ ] Crop pipeline and crop-quality rate (gate G2).
+  - [x] Download script: selective, resumable, checked against SHA-1, `ALLXML` first
+        (`scripts/download_c3pi.py`, 2026-10-06).
+    - Tested on 700 images: no failures, and reruns skip finished files.
+    - Throughput: 8 parallel downloads ≈ 7.5 MB/s, 16 ≈ 15 MB/s.
+  - [x] Full download on the desktop: finished 2026-10-07 00:10.
+    - All 49,703 selected images are present (88.3 GB; 83 GiB on disk), each checked against its SHA-1, with 0
+      failures.
+    - Consumer photos per pill type (NDC11 + part): minimum 2, median 15, maximum 101; 2,413 of 2,432 types have
+      ≥ 4.
+    - By NDC9: 2,362 medicines, minimum 3, median 15, maximum 101. 216 have only 1 reference image and 30 have
+      none.
+  - [x] All of `ALLXML` parsed into `data/interim/c3pi/metadata.csv` (`scripts/parse_c3pi_metadata.py`,
+        2026-10-07): 133,458 images after dropping 316 repeated entries.
+    - Attribute coverage for the 2,362 consumer NDC9: shape, colour, size 100%; imprint 99.7%.
+    - 227 types are two-tone.
+  - [x] Crops (`scripts/crop_c3pi.py`, 2026-10-07): 40,550 of 40,587 photos in `data/interim/c3pi/crops/`
+        (384 px), about 97% clean by eye; details in the progress log.
+  - [ ] Dedup and splits, with a leakage report (gate G2).
   - [ ] The NLM Pillbox archive isn't hosted at `data.lhncbc.nlm.nih.gov/public/` anymore. For attributes of
         the ePillID reference-only types, use `rximage.zip` metadata or DailyMed product labels.
 

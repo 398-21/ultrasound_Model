@@ -74,9 +74,18 @@ Each gate must pass before work that depends on it. If a gate fails, use its fal
 ### 1.3 Splits and leakage rules
 - **Pill identity = NDC9** (labeler + product). It's used for every split and dedup. It is conservative: 147
   ePillID pill types share an NDC9 with another type.
-- **ePillID official:** use the fold files as published. The paper describes an 80/20 holdout by pill type
-  plus 4-fold CV on the 80%, but the release has 5 fold files of about 192 pill types each. Confirm which fold
-  is the holdout from the ePillID code (P0).
+- **ePillID official** (confirmed from the ePillID code, 2026-10-07):
+  - **Holdout = fold 4** (`..._5folds_4.csv`): 745 consumer images, 192 pill types. `train_cv.py` sorts the 5
+    fold files and holds out the last one; the defaults in `arguments.py` and `configs/params.json` also name
+    fold 4 as the test set.
+  - Folds 0–3 are the 4-fold CV validation sets; together, folds 0–4 are the paper's 80/20 split.
+  - The gallery is the reference images of all 4,902 pill types, including the holdout types' 384.
+  - **The published numbers are two-sided.** The evaluation pairs a front and a back consumer photo of the same
+    pill type, and a type's score is the mean of the two sides' similarity to that type's closest reference
+    image (`metric_simul_sidepairs_eval=1`, `sidepairs_agg=post_mean`). The Papers-with-Code leaderboard is
+    titled "Pill classification (both sides)". Single-side metrics (`f_`/`b_`/`s_`) are logged separately.
+  - So compare like with like: report the two-sided protocol against the paper, and single-photo results
+    separately.
 - **C3PI training:**
   - Remove every NDC9 in the ePillID holdout fold.
   - Then split the remaining pill types into train / validation-enrolled / validation-unknown (e.g. 80 / 10 /
@@ -265,16 +274,16 @@ Interactions predicted by a model should never trigger a patient alert.
       licence.
 
 ### P2: Data preparation
-- [ ] **[Claude]** Parse `ALLXML` into one metadata table: NDC9/NDC11, file, class, camera, background,
-      shape, colour, size, imprint, imprint type, score, SHA-1.
-- [ ] **[Claude]** Crop C3PI consumer photos. Each has one pill on a plain background, small in a 2–12 MP
+- [x] **[Claude]** Parse `ALLXML` into one metadata table: NDC9/NDC11, file, class, camera, background,
+      shape, colour, size, imprint, imprint type, score, SHA-1 (2026-10-07).
+- [x] **[Claude]** Crop C3PI consumer photos (2026-10-07; second version: all 40,587 cropped, 199 of 200 clean in review). Each has one pill on a plain background, small in a 2–12 MP
       frame. Use background subtraction and contours, with a learned segmenter as a fallback. Save crops at
       a fixed size, with a crop-quality check and a random visual sample for you to review.
 - [ ] **[Claude]** Crops for MEDISEG (from masks) and for our own photos (from Stage 1 output, or manual boxes).
-- [ ] **[Claude]** Dedup and splits (section 1.3), producing manifests in `data/processed/` and a leakage
+- [x] **[Claude]** Dedup and splits (section 1.3), producing manifests in `data/processed/` and a leakage
       report.
 - [ ] **[Claude]** Attribute labels (section 1.4) and coverage statistics (gate G3).
-- [ ] **[You]** Review the crop sample and the leakage report; approve gate G2.
+- [x] **[You]** Review the crop sample and the leakage report; approve gate G2 (2026-10-07).
 
 ### P3: Model (needs D1, D2)
 - [ ] **[Claude]** Backbones, the two fusion arms, the measured-input MLP, the three heads, triplet and ArcFace
@@ -315,8 +324,8 @@ Interactions predicted by a model should never trigger a patient alert.
 ## 6. Decisions needed
 | # | Question | Options | Recommendation | Blocks |
 |---|---|---|---|---|
-| D1 | Framework | PyTorch / TensorFlow | **PyTorch**: `timm` has ConvNeXt-T and ViT-S/16 with ImageNet weights, `pytorch-metric-learning` has batch-hard triplet and ArcFace, TrOCR is PyTorch-first, and it runs on the GPU on native Windows (no WSL2) | P3 |
-| D2 | CNN branch for the main model | ConvNeXt-T stages 1–3 / ResNet-50 | ConvNeXt-T: its 14×14 map matches the ViT grid for cross-attention; ResNet-50 as an ablation | P3 |
+| D1 | Framework | PyTorch / TensorFlow | **Decided 2026-10-07: PyTorch** (a port of the FER model). Reasons: `timm` has ConvNeXt-T and ViT-S/16 with ImageNet weights, `pytorch-metric-learning` has batch-hard triplet and ArcFace, TrOCR is PyTorch-first, and it runs on the GPU on native Windows (no WSL2) | P3 |
+| D2 | CNN branch for the main model | ConvNeXt-T stages 1–3 / ResNet-50 | **Decided 2026-10-07: VGG16 + CBAM, as in the FER model**; ConvNeXt-T only as an ablation. Earlier recommendation, ConvNeXt-T: its 14×14 map matches the ViT grid for cross-attention; ResNet-50 as an ablation | P3 |
 | D3 | Reuse parts of the earlier hybrid (CBAM, capsule fusion) as extra arms? | yes / no | No by default; keeps the ablation focused on the two planned fusion arms | P3 |
 | D4 | Measured inputs on public data | A: metadata size + noise / B: own photos only | A for training, and report B as the real test | P2, P3 |
 | D5 | Cross-domain set if VAIPE stays unavailable | MEDISEG only / MEDISEG + Roboflow VAIPE mirror | MEDISEG as primary, VAIPE as a bonus | P6 |

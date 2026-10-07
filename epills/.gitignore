@@ -2,6 +2,9 @@
 data/
 outputs/
 
+# Python environment (see requirements-data.txt)
+.venv/
+
 # Weights and caches
 *.pt
 *.pth

@@ -1,0 +1,10 @@
+# Stage 2 training on the desktop (Windows, RTX 4080 SUPER), on top of requirements-data.txt:
+#   .venv\Scripts\python -m pip install -r requirements-data.txt
+#   .venv\Scripts\python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+#   .venv\Scripts\python -m pip install -r requirements-train.txt
+# Tested 2026-10-07 with Python 3.13, torch 2.11.0+cu128, torchvision 0.26.0, transformers 5.19.0.
+torch>=2.6
+torchvision>=0.21
+transformers>=4.45   # the PyTorch ViTModel; the same google/vit-base-patch16-224-in21k checkpoint as the FER model
+safetensors
+pyyaml

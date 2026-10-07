@@ -1,0 +1,9 @@
+# Data preparation (download, metadata, cropping, dedup, splits). Model training packages are added once
+# decision D1 (framework) is made.
+#   py -3.13 -m venv .venv
+#   .venv\Scripts\python -m pip install -r requirements-data.txt
+numpy>=2.1
+opencv-python-headless>=4.10
+pandas>=2.2
+pillow>=11
+pytest>=8
