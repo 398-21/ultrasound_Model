@@ -1,7 +1,8 @@
 # What the hosted API installs. Keep it to run-time needs only: no training, plotting or data-preparation packages.
-# The model's packages (e.g. torch CPU wheels, timm) are added when decision D1 (framework) is made.
+# The model's packages (torch CPU wheels, torchvision, transformers) are added with /v1/embed and /v1/match.
 fastapi>=0.115
 uvicorn[standard]>=0.30
 python-multipart>=0.0.9   # image uploads
 numpy>=2.1
 pillow>=11
+huggingface_hub>=0.24     # downloads safety.sqlite (and later the weights) from the Hugging Face repo

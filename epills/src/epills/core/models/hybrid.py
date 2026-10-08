@@ -197,6 +197,17 @@ class HybridPillNet(nn.Module):
         vit = self.vit(pixel_values=(images - 0.5) / 0.5).pooler_output
         return self.refine(self.fusion([vgg, vit]))
 
+    @classmethod
+    def from_checkpoint(cls, path, device="cpu"):
+        """A trained model from a best.pt written by scripts/train_stage2.py, in eval mode. Returns (model, ckpt)."""
+        ckpt = torch.load(path, map_location="cpu", weights_only=False)
+        mcfg, vocab = ckpt["config"]["model"], ckpt["vocab"]
+        model = cls(embedding_dim=mcfg["embedding_dim"], refine_pool=mcfg["refine_pool"],
+                    num_shapes=len(vocab["shapes"]) if mcfg["aux_heads"] else 0,
+                    num_colours=len(vocab["colours"]) if mcfg["aux_heads"] else 0, pretrained=False)
+        model.load_state_dict(ckpt["model"])
+        return model.to(device).eval(), ckpt
+
     def forward(self, images, measured=None):
         refined = self.features(images)
         head_in = refined

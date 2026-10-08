@@ -140,8 +140,20 @@ Last checked: 2026-10-06.
     and occlusion.
   - Instance segmentation masks and class labels.
   - Test subsets: 3-Pills and 32-Pills.
-- **Open:**
-  - [ ] Download; check class names (UK products, so no NDC), masks, and how many crops per class.
+- **Local copy (2026-10-08):** `data/raw/mediseg/download/` (both archives; MD5 `64d851d97d85de706e941539d48bbd72`
+  and `cb9a11217a676a86df047c4eae6ae1f8`, as figshare lists), unpacked to `data/raw/mediseg/MEDISEG/` and
+  `data/raw/mediseg/deploy/` (518 MB).
+- **Contents (checked):**
+  - `MEDISEG/32pills/`: 8,261 images, 640 × 640 (Roboflow export), COCO `annotations.json` with 14,069 pill
+    instances (box + polygon) of **32 Hong Kong products** (labels are Hong Kong registration numbers, e.g.
+    `HK-05565` = LASIX TAB 40MG; names and ingredients in `MEDISEG/metadata.csv`). 61–1,900 pills per product.
+    6,028 images hold one pill; the rest 2–11.
+  - Pill size: median long side 81 px; 25% under 42 px (small in the 640 px images).
+  - `MEDISEG/3pills/`: 2,333 smaller images (≈ 250 px) of 3 of the same products; not used.
+  - `deploy/`: 8 over-the-counter products (cetirizine, esomeprazole, fexofenadine, ibuprofen, loperamide, Panadol,
+    two paracetamols); 1-, 5- and 10-shot enrolment sets and 5 mixed query photos with 8 pills each (40 pills).
+- **How we use it:** cross-domain test only (D5). Crops from the boxes with the C3PI framing (window 1.4× the long
+  side); enrolment from single-pill photos. `scripts/evaluate_stage2.py`.
 
 ## VAIPE (cross-domain test, at risk)
 - **Described in:** <https://arxiv.org/abs/2303.09782> and the AI4VN 2022 VAIPE challenge.

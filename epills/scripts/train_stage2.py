@@ -11,7 +11,7 @@ Usage, from the epills folder:
   .venv\\Scripts\\python scripts\\train_stage2.py --config configs\\stage2_baseline.yaml
 Smoke tests:
   --overfit 10       train and evaluate on 10 training groups only (should approach 100% top-1)
-  --max-batches 20   cap batches per epoch;  --epochs 2   cap epochs per phase
+  --max-batches 20   cap batches per epoch;  --epochs 2   cap epochs per phase;  --phases 1   run only phase 1
 """
 import argparse
 import copy
@@ -43,12 +43,18 @@ def seed_everything(seed):
 
 
 def build_optimizer(model, metric_module, phase_cfg, weight_decay):
+    """
+    lr: pretrained backbones; head_lr: the new layers; metric_lr (default head_lr): the ArcFace class table, which
+    starts random for 1,710 classes and barely moves at the FER rate.
+    """
     backbone, new = [], []
     for name, p in model.named_parameters():
         if p.requires_grad:
             (backbone if name.startswith(("vgg.", "vit.")) else new).append(p)
-    new += [p for p in metric_module.parameters() if p.requires_grad]
     groups = [{"params": new, "lr": phase_cfg["head_lr"], "name": "new"}]
+    metric = [p for p in metric_module.parameters() if p.requires_grad]
+    if metric:
+        groups.append({"params": metric, "lr": phase_cfg.get("metric_lr", phase_cfg["head_lr"]), "name": "metric"})
     if backbone:
         groups.append({"params": backbone, "lr": phase_cfg["lr"], "name": "backbone"})
     return torch.optim.AdamW(groups, weight_decay=weight_decay)
@@ -61,6 +67,7 @@ def main():
     parser.add_argument("--overfit", type=int, default=0, help="use only this many training groups for train and eval")
     parser.add_argument("--max-batches", type=int, default=0)
     parser.add_argument("--epochs", type=int, default=0, help="cap epochs per phase")
+    parser.add_argument("--phases", type=int, nargs="+", help="run only these phases (smoke tests)")
     args = parser.parse_args()
 
     cfg = yaml.safe_load(args.config.read_text())
@@ -105,9 +112,14 @@ def main():
         metric_module = torch.nn.Module()
         metric_loss = lambda emb, lab: batch_hard_triplet(emb, lab, lcfg["triplet_margin"])  # noqa: E731
 
-    history, best = [], {"score": -1.0}
+    # ArcFace margin warm-up: the margin grows from 0 over the first epochs. With the full margin from the start, the
+    # quickest way to lower the loss is to squeeze every embedding onto a few dimensions (the baseline collapsed to ~3).
+    warmup = lcfg.get("arcface_margin_warmup_epochs", 0)
+    history, best, global_epoch = [], {"score": -1.0}, 0
     select = cfg["select_metric"]
     for phase_cfg in cfg["phases"]:
+        if args.phases and phase_cfg["phase"] not in args.phases:
+            continue
         model.set_phase(phase_cfg["phase"])
         optimizer = build_optimizer(model, metric_module, phase_cfg, cfg["weight_decay"])
         plateau = cfg["plateau"]
@@ -119,6 +131,9 @@ def main():
         phase_best, wait = -1.0, 0
         print(f"\n=== Phase {phase_cfg['phase']}: up to {epochs} epochs, batch {phase_cfg['p']}x{phase_cfg['k']} ===", flush=True)
         for epoch in range(1, epochs + 1):
+            global_epoch += 1
+            if isinstance(metric_module, ArcFace):
+                metric_module.margin = lcfg["arcface_margin"] * min(1.0, (global_epoch - 1) / warmup if warmup else 1.0)
             model.train()
             metric_module.train()
             t0, sums, n = time.time(), {}, 0
@@ -146,15 +161,16 @@ def main():
             metrics = evaluate(known[0], known[1], unknown, k_enrol=cfg["eval"]["k_enrol"], seed=cfg["seed"])
             score = metrics[select]
             scheduler.step(score)
-            row = dict(phase=phase_cfg["phase"], epoch=epoch, **{f"loss_{k}": v / max(n, 1) for k, v in sums.items()},
+            row = dict(phase=phase_cfg["phase"], epoch=epoch, margin=getattr(metric_module, "margin", None),
+                       **{f"loss_{k}": v / max(n, 1) for k, v in sums.items()},
                        **{f"lr_{g['name']}": g["lr"] for g in optimizer.param_groups}, **metrics,
                        train_seconds=round(train_time, 1), eval_seconds=round(time.time() - t0 - train_time, 1))
             history.append(row)
             pd.DataFrame(history).to_csv(run_dir / "history.csv", index=False)
             print(f"phase {phase_cfg['phase']} epoch {epoch:2d}: loss {row.get('loss_metric', 0):.3f} | top1 all "
-                  f"{metrics['top1_all']:.3f} | gallery-10 {metrics['top1_gallery10']:.3f} | unknown AUROC "
-                  f"{metrics['auroc_unknown']:.3f} | correct@95%-reject {metrics['known_correct_95']:.3f} | "
-                  f"{train_time:.0f}+{row['eval_seconds']:.0f}s", flush=True)
+                  f"{metrics['top1_all']:.3f} | gallery-10: top1 {metrics['top1_gallery10']:.3f}, unknown AUROC "
+                  f"{metrics['auroc_gallery10']:.3f}, correct@95%-reject {metrics['known_correct_95_gallery10']:.3f} "
+                  f"| dims {metrics['embedding_dims']:.1f} | {train_time:.0f}+{row['eval_seconds']:.0f}s", flush=True)
             if score > best["score"]:
                 best = {"score": score, "phase": phase_cfg["phase"], "epoch": epoch, "metrics": metrics,
                         "state": copy.deepcopy(model.state_dict()), "metric_state": copy.deepcopy(metric_module.state_dict())}

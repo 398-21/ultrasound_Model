@@ -10,7 +10,7 @@ hosted: data, crops, training code, scripts and notebooks stay on the developmen
 | `serving/` (this API, its Dockerfile and requirements) | `src/epills/training/` (datasets, cropper, losses, evaluation, OCR training) |
 | `src/epills/core/` (network definition, inference, Stage 3 rules) | `scripts/`, `configs/`, `notebooks/`, `tests/`, `docs/` |
 | Trained weights, downloaded at start-up from a Hugging Face model repo | `data/` (C3PI, ePillID, MEDISEG photos and crops), `outputs/` (runs, checkpoints) |
-| A small SQLite file of the DDInter pairs (Stage 3) | Raw DDInter CSVs |
+| `safety.sqlite` (DDInter pairs + RxNorm mapping), downloaded at start-up like the weights | Raw DDInter CSVs, the RxNorm response cache |
 
 `core` never imports `training` (checked by `tests/test_layout.py`), so the hosted code runs without any of it.
 
@@ -32,21 +32,53 @@ uvicorn serving.app.main:app --reload --port 7860
 ```
 Then open http://localhost:7860/docs for the interactive API page.
 
-## API contract (draft)
+## API contract
 
 The server is **stateless**: it stores no photos, galleries or schedules. The app keeps each patient's gallery
-(embeddings) and schedule on the phone and sends what a request needs.
+(embeddings) and schedule on the phone and sends what a request needs. The interactive page at `/docs` shows every
+field and lets you try requests.
 
-| Endpoint | Input | Output | Used when |
+| Endpoint | Status | Input | Output | Used when |
+|---|---|---|---|---|
+| `GET /health` | **works** | none | status, API version, model and safety database loaded | Start-up, monitoring |
+| `POST /v1/safety/medications` | **works** | The medication list: per medication an `id` and any of `name` (brand or generic), `ndc`, `rxcui`, `ingredients` (for medicines without US codes) | Alerts (interactions, duplications, unidentified medications) and how each medication was identified | **A medication is added or changed** |
+| `POST /v1/safety/dose` | **works** | The schedule for this dose (`medication_id`, `count`) and the checked pills from `/v1/match` (`medication_id`, `decision`) | Alerts (unknown pill, double dose, not part of this dose, missed, unsure) and a short summary | **Every dose check**, after `/v1/match` |
+| `GET /v1/safety/label?rxcui=…` or `?ingredient=…` | **works** | RxCUI or ingredient name | Warning sections of the US label (openFDA), quoted as written | **When the user asks** |
+| `POST /v1/embed` | after training | Pill crops (from Stage 1), with size in mm and mean Lab colour when the mat gives them | One 256-d embedding per crop, plus the model version | **Enrolment**: the app stores them as the gallery |
+| `POST /v1/match` | after training | Pill crops + the patient's gallery (medication id → embeddings) | Per crop: best medication, similarity, decision `match` / `unknown` / `ambiguous` | **Every dose check** |
+
+**Alerts** (every safety endpoint) have the same shape:
+`type`, `severity` (major / moderate / ungraded / minor), `colour` (red / amber / grey), `speak`, `notify_caregiver`,
+`message`, `medication_ids`, `source`, `severity_graded`, `details`.
+- The plan's mapping: major = red, spoken, caregiver notified; moderate = amber, spoken; minor = on screen only.
+- Every `message` ends with "Check with your pharmacist." and never says take or stop.
+- DDInter's ungraded pairs ("Unknown", 18% of pairs) come back as `ungraded`: grey, on screen only, not spoken
+  (decision D6), so common medication lists aren't drowned in alerts.
+- A medication that can't be identified is itself an alert, so **no alerts means every medication was checked**,
+  not that the check was skipped. `all_identified` says the same.
+- Duplications are amber, not red: two strengths of one drug are sometimes prescribed together on purpose.
+
+Example, a medication added:
+```
+POST /v1/safety/medications
+{"medications": [{"id": "m1", "name": "Lipitor 10 mg"}, {"id": "m2", "name": "clarithromycin"}]}
+-> alerts: [{"type": "interaction", "severity": "major", "colour": "red", "speak": true,
+             "notify_caregiver": true, "message": "Lipitor 10 mg and clarithromycin have a serious interaction.
+             Check with your pharmacist.", ...}]
+```
+
+When the model version changes, the app must re-embed its gallery (the embed response carries the version).
+
+## Assets the server loads (not in git)
+
+| Asset | Built by | Size | Where the Space gets it |
 |---|---|---|---|
-| `GET /health` | none | status, API version, model loaded | Start-up, monitoring (**exists now**) |
-| `POST /v1/embed` | One or more pill crops (from Stage 1), with length/width in mm and mean Lab colour when the mat gives them | One 256-d embedding per crop, plus the model version | **Enrolment**: the app stores the embeddings as the patient's gallery |
-| `POST /v1/match` | Pill crops + the patient's gallery (medication id → embeddings) | Per crop: best medication, similarity, decision `match` / `unknown` / `ambiguous` (flip the pill and retake) | **Every dose check** |
-| `POST /v1/safety/medications` | The medication list (names or RxCUIs, active ingredients) | Interacting pairs with severity, therapeutic duplications | **A medication is added or changed** |
-| `POST /v1/safety/dose` | The schedule for this dose + the matched pills | Double doses, missed medications, unknown pills | **Every dose check**, after `/v1/match` |
+| `safety.sqlite`: DDInter pairs keyed to RxNorm ingredients | `scripts/build_safety_db.py` | a few MB | The Hugging Face repo in `EPILLS_MODEL_REPO` (or a local path in `EPILLS_SAFETY_DB`) |
+| `best.pt`: the trained Stage 2 model | `scripts/train_stage2.py` | about 400 MB | The same repo |
 
-Every safety result carries its source and ends with "check with your pharmacist"; the API never says take or stop.
-When the model version changes, the app must re-embed its gallery (the response carries the version for this).
+The server also calls two free public APIs at run time: RxNav (RxNorm, to identify medications) and openFDA
+(labels). Spaces allow outgoing internet. Set `OPENFDA_API_KEY` in the Space's secrets for higher limits
+(optional).
 
 ## Before going public: two decisions
 

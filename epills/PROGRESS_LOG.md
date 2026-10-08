@@ -5,44 +5,281 @@ Newest entry first. The plan, gates and decisions are in [ROADMAP.md](ROADMAP.md
 
 ---
 
-## Who does what
+## Where we are (2026-10-08)
 
-| Area | Claude | You |
+Data for Stage 2 is ready and checked (gates G1–G3 passed). Your FER model is ported to PyTorch. Run 1 (the
+baseline) collapsed because of a learning-rate choice in the port; run 2 fixed it and meets all four validation
+targets. **Run 3 (+ C3PI studio reference photos, D7) is the best model**: calibrated (threshold 0.831, flip
+margin 0.150), 84% top-1 over 200 held-out medicines, ePillID MAP@1 37% (run 2: 12%). It still **doesn't
+generalise well to other phones and conditions** (MEDISEG 42%). Next: decide on run 4 (domain augmentation).
+Stage 3 and its API endpoints are built and work locally.
+
+## Plan at a glance
+
+| Phase | What | Status | Next action | Owner |
+|---|---|---|---|---|
+| P0 Setup | Decisions, environment, project layout | ✅ done | — | — |
+| P1 Data acquisition | Download and check the datasets | 🟡 C3PI, ePillID, DDInter done | MEDISEG download (small); own pill photos; DDInter email | Claude; You |
+| P2 Data preparation | Metadata, crops, dedup, splits, labels | ✅ done for C3PI | MEDISEG and own-pill crops when those arrive | Claude |
+| P3 Model | FER hybrid in PyTorch, losses, sampler, training script | ✅ done; 12 tests pass | — | — |
+| P4 Training | Baseline run, then improvements and ablations | ✅ run 3 (+ references) is the best model (2026-10-08; `outputs/runs/stage2_run3/best.pt`); run 2 meets all validation targets; run 1 collapsed (fixed) | Run 4 (domain augmentation), when you decide | Claude runs it when you say; you read the results |
+| P5 Open-set calibration | Rejection threshold and flip margin on validation | ✅ 2026-10-08: threshold 0.793, margin 0.170 (`calibration.json`) | Re-run for every new model | Claude |
+| P6 Evaluation | ePillID official (fold 4), MEDISEG, own pills | 🟡 runs 2 and 3 scored on C3PI holdout, ePillID, MEDISEG (2026-10-08) | Own pills (G5) when photos exist; score every new model | Claude; you for own pills |
+| P7 Stage 3 safety engine | DDInter + RxNorm rules, dose checks, openFDA | 🟡 built and tested 2026-10-08 | Pharmacist or supervisor review of the wording | You |
+| P8 Imprint OCR | TrOCR tie-breaker (stretch goal) | ⬜ optional | — | — |
+| P9 Write-up | Report, tables, figures | ⬜ last | — | You; Claude drafts |
+| P10 API and hosting | FastAPI on Hugging Face Spaces (free) | 🟡 Stage 3 endpoints work locally | Hugging Face account and Space (you); `/v1/embed` and `/v1/match` once the model is trained | You; Claude |
+
+**Up next, in order:**
+1. Decide on run 4 (domain augmentation: lighting, white balance, downscale/blur, JPEG, backgrounds,
+   neighbouring pills), on top of run 3. Run 3 is the current best model (references helped ePillID 3x; MEDISEG
+   barely moved).
+2. Own pill photos (G5): skipped for now; still the deciding test when photos exist.
+3. `/v1/embed` and `/v1/match` in the API, serving run 3's model (CPU) until a better one exists.
+4. Deploy the API to Hugging Face (needs your account and a model repo).
+
+**Is the model usable? Targets on validation** (proposed 2026-10-08 for the prototype; agree them with your team):
+
+| Metric (printed each epoch) | Meaning | Target |
 |---|---|---|
-| **Decisions** | Lays out the options and recommends one (ROADMAP §6) | Decide D1–D6 |
-| **Public data** | Finds and checks sources; writes download scripts (selective, resumable, checked against checksums); downloads small sets here (ePillID, metadata, MEDISEG, DDInter) | Runs the big C3PI download (~89 GB) on the desktop and sends back its summary |
-| **Access requests** | Drafts the emails and says exactly what to ask for | Sends the emails (VAIPE authors, DDInter authors); creates accounts (Roboflow, openFDA key; DrugBank if wanted) |
-| **Own pills** | Writes the protocol; designs a printable mat if needed; checks the photos and labels once delivered | Buys or collects the pills, takes the photos, fills in `labels.csv` |
-| **Data preparation** | Metadata parsing, cropping, dedup, splits, attribute labels, leakage report | Reviews the crop sample and leakage report; approves gate G2 |
-| **Model and training** | All model, loss, sampler and training code; configs; smoke tests on CPU or the laptop | Installs the environment and runs training and ablations on the RTX 4080 Super; sends back logs |
-| **Evaluation** | Evaluation scripts (MAP/GAP, open-set metrics, bootstrap CIs), results tables, failure analysis | Runs them on the desktop where the data and weights are |
-| **Stage 3** | Rule engine, DDInter ↔ RxNorm mapping, openFDA lookup, tests | Gets a pharmacist or supervisor to review alert wording and severity mapping |
-| **Write-up** | Drafts sections, tables and figures | Owns the report; checks course requirements |
+| `gallery-10: top1` | right medicine picked from a patient-sized list of 10 | ≥ 95% |
+| `unknown AUROC` | tells "one of yours" from "not yours" in that list (0.5 = chance) | ≥ 0.9 |
+| `correct@95%-reject` | real pills accepted and named correctly when 95% of unknown pills are rejected | ≥ 80% |
+| `wrong_accept_95_gallery10` (in `history.csv`) | real pills accepted with the wrong name: the dangerous error | ≤ 2% |
+| `dims` | effective embedding dimensions; a drop toward 1–5 means collapse (run 1: ~3) | stays well above 5 |
 
-Claude works on this laptop (RTX 3050 Ti, 4 GB), which is enough for scripts, small downloads and smoke tests.
-Anything big (the C3PI download, training) runs on your desktop.
-
----
+All open-set numbers are measured per patient-sized gallery of 10 (from run 2 on). `history.csv` also keeps the
+harsher versions against all 214 validation medicines (`auroc_unknown`, `known_correct_95`, `wrong_accept_95`).
 
 ## Status board
 
 | Gate | What | Status | Next step | Owner |
 |---|---|---|---|---|
-| G1 | ePillID benchmark | ✅ passed 2026-10-07: downloaded and checked on both machines; holdout = fold 4; published metrics are two-sided | — | Claude |
-| G2 | C3PI training photos | ✅ passed 2026-10-07 (your sign-off): 40,587 crops (199/200 clean); split by appearance group; leakage report clean; 1,710 training groups with median 15 crops | — | — |
-| G3 | Attribute labels (shape, colour, size) | ✅ passed 2026-10-07 for the C3PI training types: shape, colour and size for 100% of 2,362 NDC9 (metadata table) | Majority label per type where photos disagree; ePillID reference-only types later (rximage metadata) | Claude |
-| G4 | Cross-domain test | 🟡 MEDISEG available; VAIPE at risk | Download MEDISEG; email the VAIPE authors | Claude; You |
-| G5 | Own pills | ⬜ not started | Choose the pills; get the mat; photo sessions | You |
+| G1 | ePillID benchmark | ✅ passed 2026-10-07: downloaded and checked; holdout = fold 4; published metrics are two-sided | — | — |
+| G2 | C3PI training photos | ✅ passed 2026-10-07 (your sign-off): 40,587 crops (199/200 clean); split by appearance group; leakage report clean; 1,710 training groups, median 15 crops | — | — |
+| G3 | Attribute labels (shape, colour, size) | ✅ passed 2026-10-07: shape, colour and size for 100% of the 2,362 C3PI medicines | ePillID reference-only types: only if we use ePillID references in training | Claude |
+| G4 | Cross-domain test | ✅ MEDISEG downloaded and checked 2026-10-08 (MD5s match; 32 products, 14,069 pills; Deploy set); scored with run 2. VAIPE dropped | If MEDISEG is also used for training: split it by product first | Claude |
+| G5 | Own pills | ⏸ skipped for now (no photos yet, 2026-10-08) | Choose the pills; get the mat; photo sessions | You |
 | G6 | Safety data | 🟡 DDInter severity in hand; advice text and duplications missing | Email the DDInter authors; RxNorm mapping | You; Claude |
 
 | Decision | Status |
 |---|---|
 | D1 framework | ✅ PyTorch (2026-10-07): a faithful port of the FER model |
-| D2 CNN branch | ✅ VGG16 + CBAM from the FER model (2026-10-07); ConvNeXt-T only as a possible ablation |
-| D3 earlier-hybrid parts as extra arms | ⬜ open (recommendation: no) |
-| D4 measured inputs on public data | ⬜ open (recommendation: metadata size + noise for training) |
-| D5 cross-domain set | ⬜ open (recommendation: MEDISEG primary) |
-| D6 DDInter "Unknown" severity | ⬜ open (recommendation: show as Moderate, "not graded") |
+| D2 CNN branch | ✅ VGG16 + CBAM from the FER model (2026-10-07) |
+| D3 earlier-hybrid parts as extra arms | ✅ superseded by D2: the main model *is* the earlier hybrid (CBAM, capsule fusion, refinement) |
+| D4 measured inputs (size, colour) on public data | ⬜ open; the baseline runs without them (recommendation: metadata size + noise as an ablation) |
+| D5 cross-domain set | ✅ MEDISEG (2026-10-07); VAIPE copies (Roboflow, Kaggle) only as Stage 1 extra training data |
+| D6 DDInter "Unknown" severity | ✅ on screen only (2026-10-08): its own level `ungraded`, grey, not spoken |
+| D7 C3PI studio reference photos in training | ✅ yes, as run 3 (2026-10-08): 6,198 crops of training groups only. ePillID MAP@1 12% → 37%; kept |
+| D8 hosting | ✅ Hugging Face Spaces, free CPU; crops sent to the API are accepted for the non-commercial prototype (2026-10-07) |
+
+## Who does what
+
+| Area | Claude | You |
+|---|---|---|
+| **Decisions** | Lays out the options and recommends one (ROADMAP §6) | Decides |
+| **Data** | Download scripts, cropping, dedup, splits, leakage reports | Reviews samples and reports; collects and photographs own pills |
+| **Access requests** | Drafts the emails | Sends them (DDInter authors); creates accounts if needed |
+| **Model and training** | Model, losses, training code, configs; short tests only | Says when a full run starts; reads the results with Claude |
+| **Evaluation** | Evaluation scripts, results tables, failure analysis | Agrees the targets; checks the results |
+| **Stage 3** | Rule engine, DDInter ↔ RxNorm mapping, openFDA lookup, tests | Gets a pharmacist or supervisor to review alert wording |
+| **API** | FastAPI app, Docker, Hugging Face Space setup | Creates the Hugging Face account and model repo; shares the API with the app team |
+| **Write-up** | Drafts sections, tables and figures | Owns the report; checks course requirements |
+| **Other stages (1, 4)** | Advice and briefs for teammates | Guides the teammates |
+
+Everything runs on the desktop (RTX 4080 SUPER, Windows). The ePills Python environment is `epills/.venv`
+(Python 3.13, PyTorch with CUDA); no WSL needed. Full training runs only start when you say so.
+
+Note on older entries: before 2026-10-07 (night) the cropper lived in `src/epills/datasets/`; it is now
+`src/epills/training/datasets/`. Their "Next" lists are history; the current plan is the table above.
+
+---
+
+## 2026-10-08 (night): run 3 (stage2_run3, D7 reference photos). Big gain on studio references; other conditions barely move
+
+- 21:15–23:21 (126 min): all 25 + 35 epochs; best at the very last epoch (phase 2, epoch 35), so it was still
+  creeping up (top-1 over 214 within 85.5–86.1% over the last 5 epochs). `dims` ~14: no collapse.
+- Calibrated the same way (validation): threshold **0.831**, margin **0.150**
+  (`outputs/runs/stage2_run3/calibration.json`). Scored on the same test sets with the same fixed rules.
+
+  | | Run 2 | Run 3 (+ references) |
+  |---|---|---|
+  | **Validation** gallery-10 top-1 / AUROC / correct@95% / wrong@95% | 98.3% / 0.981 / 90.7% / 1.0% | 98.1% / 0.979 / 90.2% / 1.1% |
+  | Validation top-1 over 214 | 85.2% | 86.1% |
+  | **C3PI held-out** top-1 over 200 | 82.0% | **84.4%** |
+  | C3PI held-out app scenario: correct / wrong / unknown rejected | 78.6% / 0.1% / 94.2% | 79.3% / 0.0% / **95.1%** [94.1–96.0] |
+  | **ePillID** two-sided MAP / MAP@1 / GAP / GAP@1 | 0.226 / 12.1% / 0.015 / 0.093 | **0.506 / 37.1% / 0.105 / 0.428** |
+  | ePillID two-sided top-5 / single-photo MAP@1 | 32.9% / 8.3% | 67.3% / 30.7% |
+  | **MEDISEG** top-1 over 32 (pills over 100 px) | 40.1% (53.2%) | 41.8% (56.8%) |
+  | MEDISEG app scenario: correct / wrong / own rejected / unknown rejected | 18.5% / 1.0% / 51.1% / 79.5% | 18.0% / 0.9% / 67.6% / **91.4%** |
+  | MEDISEG-Deploy 10-shot: top-1; correct / wrong / flip / rejected (of 40) | 42.5%; 4 / 1 / 12 / 23 | **52.5%; 6 / 0 / 4 / 30** |
+
+- **Reading:**
+  - The reference photos did what they were for: ePillID (everyday photo vs studio reference) tripled, MAP@1
+    12% → 37%, top-5 33% → 67%. Still far from the paper's 92%, which trains on the references of all 4,902
+    types *including the test types*; ours never sees a test type.
+  - Small gain on new medicines in C3PI photos (84.4% vs 82.0%), and unknown rejection now meets 95% there.
+  - Other phones and conditions (MEDISEG) barely improved in recognition (+1.7 points). The model got more
+    cautious there: fewer wrong matches and far fewer unknown pills accepted (3.1% vs 5.4%), but more of the
+    patient's own pills rejected (68% vs 51%).
+  - So the remaining gap is camera, lighting, background and resolution, which run 4 (domain augmentation)
+    targets.
+- Run 3 is the better model on every test set and safer under shift: it replaces run 2 as the model to serve.
+
+## 2026-10-08 (late night): D7 reference photos cropped; run 3 started
+
+- Decision D7 (you, 2026-10-08): run 3 = run 2 + C3PI studio reference photos; run 4 (domain augmentation) later,
+  if needed. Own pills (G5) skipped for now.
+- **Reference crops** (`src/epills/training/datasets/c3pi_ref_crop.py`, `scripts/crop_c3pi_refs.py`):
+  - MC_CHALLENGE (one pill side on plain grey) → 1 crop; RxImage (both sides, rulers, information bar) → 2 crops,
+    with the other side, the edge-on profile and the ruler marks painted over in the background grey.
+  - Same framing as the everyday crops (window 1.4× the long side, 384 px).
+  - **Only training groups' references** (4,688 photos): references of validation and test pills would leak.
+    Reference-only pill types (2,574 RxImage photos) left out: no group, no look-alike check.
+  - 13 flagged crops (several blobs, touching sides) dropped after review; 40 random crops checked
+    (`data/interim/c3pi/crops/references_review.jpg`).
+  - Result: **6,198 reference crops** for 1,683 of the 1,710 training groups (3,164 MC_CHALLENGE, ~3,040
+    RxImage) → `data/processed/c3pi_splits/manifest_with_refs.csv` (column `source`: everyday / reference).
+    Validation and test splits unchanged.
+- **Run 3** (`configs/stage2_run3.yaml`): run 2's settings, training manifest with references (35,669 photos).
+  Started 21:15. Epoch 1: top-1 (214) 28.7%, gallery-10 72.9% (run 2: 29.4%, 72.8%).
+
+## 2026-10-08 (late night): P5 calibration and P6 test sets for run 2. Generalises to new medicines, not to new photo conditions
+
+- **MEDISEG downloaded** (gate G4): both figshare files, MD5s match (`MEDISEG.tar.gz` 0.44 GB,
+  `MEDISEG-Deploy.tar.gz` 8 MB), unpacked to `data/raw/mediseg/` (518 MB). Contents in `docs/datasets.md`.
+- **P5, calibration** (`scripts/calibrate_stage2.py`, validation only; 1,000 simulated patients, 10 medications,
+  3 enrolment photos each) → `outputs/runs/stage2_run2/calibration.json`:
+  - threshold **0.793**: 95% of unknown pills rejected; margin **0.170**: the largest with ≤ 10% flip requests.
+  - Own pills: 82.2% matched correctly, 0.0% wrong (1.0% without the margin), 9.6% flip, 8.2% rejected.
+    Unknown pills: 95.0% rejected, 1.5% flip, 3.5% accepted as one of the patient's.
+- **P6, test sets** (`scripts/evaluate_stage2.py`; results in `outputs/runs/stage2_run2/eval/`). Fixed before
+  scoring: model, framing (window 1.4× the pill's long side, as the cropper), threshold and margin.
+
+  | Test set | Closed set top-1 | App scenario (10 medications, fixed threshold and margin) |
+  |---|---|---|
+  | C3PI photos of held-out types (200 medicines, 4,005 photos) | 82.0% over all 200 | correct 78.6% [76.3–81.0], wrong 0.1%, flip 10.0%, own rejected 11.3%; unknown rejected 94.2% [93.2–95.0], unknown accepted 4.2% |
+  | MEDISEG 32 products (Hong Kong, other phones, clutter) | 40.1% over 32 | correct 18.5%, wrong 1.0%, flip 29.4%, own rejected 51.1%; unknown rejected 79.5%, unknown accepted 5.4% |
+  | MEDISEG-Deploy (8 products, 40 pills in mixed photos) | 27.5% / 32.5% / 42.5% with 1 / 5 / 10 enrolment photos | 10-shot: 4 correct, 1 wrong, 12 flip, 23 rejected |
+
+  [95% intervals from resampling medicines.] Without the margin, wrong matches would be 1.1% (C3PI) and 11.0%
+  (MEDISEG): the margin matters most under domain shift.
+- **ePillID official** (fold 4, simulated front + back pairs, gallery = reference photos of all 4,902 types):
+  MAP 0.226, GAP 0.015, MAP@1 0.121, GAP@1 0.093 (paper's best: 0.958 / 0.812 / 0.920 / 0.912). Single photos:
+  MAP@1 0.083. Not like for like: the paper trains on the reference photos of all 4,902 types (holdout types
+  included); our model has never seen a reference photo. Checks: everyday-to-everyday within fold 4 gives 70.7%
+  (1 enrolment photo) / 81.5% (2); everyday-to-reference restricted to the 192 holdout types gives 42.7%. So the
+  pipeline works and the gap is everyday photos vs studio references (decision D7).
+- **MEDISEG by pill size** (closed set): under 50 px 29.5%, 50–100 px 29.8%, over 100 px 53.2%. MEDISEG's images
+  are 640 px, so half its pills are under 81 px long; the app's crops come from full-resolution photos.
+- **Reading:** the model generalises to *new medicines* photographed like C3PI (82% vs 85% on validation), but not
+  to *new photo conditions*: studio references, other phones, lighting, backgrounds, small pills. All training
+  data is one source (C3PI). Under shift it mostly fails safe (rejects or asks to flip), but wrong matches rise to
+  ~1% and unknown pills are accepted ~5% of the time: the C3PI threshold doesn't transfer.
+- Options (decisions for the next run): D7 reference photos; domain augmentation (lighting, white balance,
+  downscale/blur, JPEG, backgrounds, neighbouring pills); MEDISEG split by product into train/test halves; own
+  pills (G5) as the deciding test.
+
+## 2026-10-08 (night): run 2 (stage2_run2, config `configs/stage2_run2.yaml`). All validation targets met
+
+- Same machine and data as run 1. 18:59–20:37 (98 min).
+- Changes from run 1 (one fix): FER learning rates for the network (3e-5, then 1e-5), `metric_lr` 1e-3 / 1e-4
+  for the ArcFace table only, margin warm-up 0 → 0.3 over 3 epochs.
+- Phase 1: all 25 epochs, still improving at the end (~51 s + 10 s per epoch). Phase 2: early stop after epoch 32;
+  best at epoch 26 (~122 s + 10 s per epoch). `dims` 12 → 15 throughout: no collapse.
+- Best validation (phase 2, epoch 26), `outputs/runs/stage2_run2/best.pt`:
+
+  | Metric | Patient-sized gallery of 10 | Target | All 214 val medicines | Run 1 (gallery 10) |
+  |---|---|---|---|---|
+  | top-1 | **98.3%** | ≥ 95% ✅ | 85.2% | 77.2% |
+  | unknown AUROC | **0.981** | ≥ 0.9 ✅ | 0.887 | 0.78 |
+  | correct @ 95% unknown rejected | **90.7%** | ≥ 80% ✅ | 48.8% | 17.3% |
+  | wrong accept @ 95% | **1.0%** | ≤ 2% ✅ | 3.5% | 3.7% |
+
+- **Against the targets: all met on validation.** Caveats:
+  - The validation medicines are unseen, but the photos are the same C3PI conditions as training. The cross-domain
+    tests (ePillID fold 4, MEDISEG, own pills) are the real measure, and will be lower.
+  - The epoch was picked on this validation set (best of 57), so these numbers are slightly optimistic.
+  - The rejection threshold here is set per gallery (mean 0.79). The app needs one fixed threshold and a flip
+    margin, chosen in P5.
+- Next: P5 calibration, the P6 evaluation script, then `/v1/embed` and `/v1/match` in the API. D7 (reference
+  photos) waits for the cross-domain results.
+
+## 2026-10-08 (evening): run 1 (stage2_baseline, config `configs/stage2_baseline.yaml`). Not usable; cause found and fixed
+
+- Desktop, RTX 4080 SUPER, PyTorch 2.11 + CUDA 12.8, bf16 autocast. 16:35–18:21 (1 h 46 min).
+- Data: 1,710 training groups, 29,471 photos; P × K = 32 × 4 (phase 1), 16 × 4 (phase 2).
+- Phase 1: all 25 epochs, best at epoch 20, ~51 s + 10 s eval per epoch. Phase 2: all 35 epochs (early stopping
+  never triggered: `top1_all` kept edging up within noise), best at epoch 29, ~122 s + 10 s per epoch.
+- Best validation (phase 2, epoch 29):
+
+  | Metric | All 214 val medicines | Patient-sized gallery of 10 | Target (gallery 10) |
+  |---|---|---|---|
+  | top-1 | 24.0% | 77.2% | ≥ 95% |
+  | unknown AUROC | 0.53 | 0.78 | ≥ 0.9 |
+  | correct @ 95% unknown rejected | 1.5% | 17.3% | ≥ 80% |
+  | wrong accept @ 95% | 7.2% | 3.7% | ≤ 2% |
+
+  The gallery-10 open-set columns were computed afterwards (`retrieval.evaluate` now reports them every epoch).
+  The 214-medicine AUROC was too harsh a reading: there an unknown pill almost always has a look-alike.
+- **Against the targets: not met on any metric.**
+- **Why: the embeddings collapsed.** The 256-d embeddings of different pills use about 2–3 effective dimensions
+  (VGG branch ~5, capsule fusion ~8, the 4 refinement tokens identical). That's enough for colour, shape and
+  size, not for imprints. The training loss stayed near chance level for 1,710 classes (8.1 vs ln 1710 = 7.4).
+  Every val photo sits within ~0.5° of some enrolled medicine, so `threshold_95` was 0.999998.
+- Ruled out with short checks: label or sampler bugs; stale batch-norm statistics (re-estimated: no change); the
+  ArcFace margin (collapses even without it); crop framing (the pill's long side is ~160 of the 224 input px).
+- **Cause found: the learning rate of the new layers.** The port gave CBAM, fusion, refinement and heads
+  `head_lr` 1e-3 (phase 2: 1e-4). The FER notebook trains everything at 3e-5 (phase 2: 1e-5). Probe with the FER
+  rates, 3 phase-1 epochs: epoch 1 already reaches top-1 24.4% (all 214) / 64% (gallery 10), gallery-10 AUROC
+  0.70. That's what the whole baseline reached in 1 h 46 min. But the embeddings still shrank (13 → 6 → 3 dims),
+  and the ArcFace table barely learned (loss 18.4 → 17.1).
+- **Fix: FER rates for the network, 1e-3 for the ArcFace table only, margin warm-up 0 → 0.3 over 3 epochs.** Probe,
+  4 phase-1 epochs (~5 min): dims stay at 12–14. Epoch 4: gallery-10 top-1 90.2%, unknown AUROC 0.904,
+  correct@95% 55%; top-1 over all 214: 56%. The loss rises over these epochs by design (the margin grows).
+- Run 2 started 18:59 with these settings: `configs/stage2_run2.yaml`.
+- Data limit to keep in mind: C3PI rates the imprint "Can not Identify" in 22% of these photos and "Partial" in
+  40%.
+- Code changes: `--phases` (run only some phases), `arcface_margin_warmup_epochs`, `metric_lr` (own learning
+  rate for the ArcFace table), and new per-epoch metrics: gallery-10 AUROC / correct / wrong accept, and
+  `embedding_dims` (collapse alarm).
+
+## 2026-10-08: Stage 3 safety engine and its API endpoints. Baseline training running
+
+- **Interaction database** (`scripts/build_safety_db.py` -> `data/processed/safety/safety.sqlite`, 17.8 MB, not in
+  git; it goes to the Hugging Face repo with the weights):
+  - DDInter 2.0: 1,971 drugs, 234,981 pairs (Major 39,082; Moderate 143,748; Minor 9,736; Unknown 42,415); no pair
+    has conflicting levels across the 14 files.
+  - Every DDInter drug mapped to RxNorm ingredient (IN) codes through the RxNav API: **1,946 of 1,971 (98.7%)**.
+    The 25 unmapped are vaccines, contrast agents and radiotracers, never pills. Report:
+    `ddinter_rxnorm_map.csv`, `build_report.json`; responses cached in `data/safety/rxnorm_cache/`.
+  - Plain DDInter entries are preferred over qualified ones ("Morphine" over "Morphine (liposomal)"), since the app
+    checks pills. 12 ingredients have two plain entries (salt or prodrug forms, e.g. fenofibrate / fenofibric acid);
+    both are used and the more severe level wins.
+- **Rules** (`src/epills/core/safety/`, hosted): `rxnorm.py` (identify medications), `db.py` (schema and lookups),
+  `rules.py` (interactions, duplications, dose checks), `openfda.py` (label warnings).
+  - Medications are identified by listed ingredients (for non-US medicines), NDC from the bottle, RxCUI, name, or a
+    fuzzy name match (reported so the app can confirm "did you mean ...?"). Brand names work: Lipitor ->
+    atorvastatin, Zoloft -> sertraline, Glucophage -> metformin; typos like "Metforminn 500" too.
+  - A medication that can't be identified, or an RxNorm outage, is itself an alert: no alerts always means every
+    medication was checked.
+  - The plan's severity mapping (major red + spoken + caregiver; moderate amber + spoken; minor screen only); every
+    message ends with "Check with your pharmacist." and never says take or stop (a test enforces both).
+  - Duplications (same ingredient twice: brand + generic, Panadol + Tylenol) are amber, since two strengths are
+    sometimes prescribed together on purpose.
+  - Dose checks: unknown pill, double dose, a pill not part of this dose (red); missed, unsure pill (amber).
+- **API** (`serving/app/main.py`, v0.2.0): `POST /v1/safety/medications`, `POST /v1/safety/dose`,
+  `GET /v1/safety/label`; contract and alert format in `serving/README.md`. The database loads from
+  `EPILLS_SAFETY_DB` or the Hugging Face repo (`EPILLS_MODEL_REPO`).
+- **Tests:** 26 pass (14 new: rules on a made-up database with a fake RxNorm, wording rules, API endpoints). Live
+  check against RxNorm and openFDA: Lipitor + clarithromycin, warfarin + Bayer aspirin + Advil, sertraline + tramadol
+  -> serious (red); Panadol (ingredients) + Tylenol -> duplication; atorvastatin label warnings returned.
+- **Finding, for decision D6:** a common list (atorvastatin, metformin, levothyroxine, omeprazole, with a brand and a
+  generic of two of them) gave 13 spoken amber alerts; most are DDInter "Unknown" (listed, not graded). Too many
+  alerts and users stop listening. **Decided (D6): ungraded pairs get their own level, `ungraded`, on screen only,
+  not spoken.** Graded Major and Moderate alert as planned.
+- **Not done:** deployment to Hugging Face (needs your account); DDInter advice text and duplication classes (DDInter
+  email, G6).
 
 ---
 
@@ -330,20 +567,17 @@ Anything big (the C3PI download, training) runs on your desktop.
 ## Template: training run
 
 ```
-## YYYY-MM-DD: run <n> (<arm>)
+## YYYY-MM-DD: run <n> (<name>, config <file>)
 
-- Machine, framework versions, mixed precision on/off
-- Arm: CNN / ViT / fusion (cross-attention, concat) / L_metric (triplet, ArcFace) / measured inputs on/off /
-  λ₁, λ₂ / colour jitter / flips
-- Data: training pill types and images (after dedup); P×K
-- Phase 1 (heads only, 5 epochs): best validation metric, time per epoch
-- Phase 2 (all unfrozen): LR, layer decay, epochs, best validation metric, time per epoch, peak VRAM
-- ePillID official: MAP, GAP, MAP@1, GAP@1 (paper's best: 95.76 / 81.20 / 92.01 / 91.19)
-- ePillID strict: top-1, top-5, MAP
-- Open set at the validation threshold (τ = , δ = ): wrong-pill acceptance, unknown rejection,
-  correct acceptance, AUROC, flip-request rate [95% CIs]
-- Cross-domain (MEDISEG / VAIPE): top-1, wrong-pill acceptance, unknown rejection
-- Own pills: top-1, wrong-pill acceptance, unknown rejection, flip-request rate
-- Runtime:
+- Machine, PyTorch / CUDA versions, bf16 on/off
+- Changes from the previous run (one factor at a time): loss (ArcFace / triplet), refine pool, aux heads,
+  colour jitter, reference photos, measured inputs
+- Data: training groups and photos; P x K per phase
+- Phase 1 (ViT and VGG blocks 1-3 frozen): epochs run, best epoch, time per epoch
+- Phase 2 (all trainable): epochs run, best epoch, time per epoch, peak VRAM
+- Best validation: gallery-10, top-1 all, unknown AUROC, correct@95%-reject, wrong accept@95%
+- Against the targets: met / not met, and what to change next
+- (Final model only) ePillID official: MAP, GAP, MAP@1, GAP@1 (paper's best 95.76 / 81.20 / 92.01 / 91.19);
+  MEDISEG; own pills
 - Notes / anomalies:
 ```

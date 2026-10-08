@@ -121,29 +121,34 @@ Each gate must pass before work that depends on it. If a gate fails, use its fal
 Our custom hybrid ViT + CNN maps each pill crop to a 256-dimensional embedding. Each pill is assigned to the
 nearest enrolled medication, or rejected as unknown if no match is close enough.
 
-### 2.1 Model design
-- **CNN branch** (e.g. the first 3 stages of ConvNeXt-Tiny, or ResNet-50): local detail such as imprint strokes,
-  score lines and edge bevels. ConvNeXt-T stages 1–3 give a 14×14 map at 224 px, which lines up with the ViT's
-  patch grid.
-- **ViT branch** (e.g. ViT-S/16): global shape and how colour is laid out across the pill.
-- **Fusion, a key design choice to test:**
-  - cross-attention from the ViT tokens (queries) to the CNN feature map (keys and values)
-  - plain concatenation plus an MLP
-- **Measured inputs:** pill length and width in mm, and mean colour in L\*a\*b\* from the mat-corrected crop,
-  joined before the projection head. Pills that look alike in a photo often differ in size.
+### 2.1 Model design (decided 2026-10-07: the FER hybrid, ported to PyTorch)
+The model is the hybrid from `FER/exp-tuning.ipynb` without its face-geometry branch, in
+`src/epills/core/models/hybrid.py`. Its blocks are checked against the TensorFlow original
+(`tests/test_hybrid_parity.py`).
+- **CNN branch:** VGG16 (ImageNet) + CBAM, global average pooling, Dense 256. Local detail: imprint strokes,
+  score lines, edge bevels.
+- **ViT branch:** ViT-B/16 (`google/vit-base-patch16-224-in21k`), pooler output (768). Global shape and colour
+  layout.
+- **Fusion:** the Capsule Fusion Block (dynamic routing, 2 iterations, residual update), then the Transformer
+  Refinement Block (4 tokens x 64, 2 layers).
+- **Measured inputs (optional, D4):** pill size and mean L\*a\*b\* colour, joined before the embedding head. Off
+  in the baseline.
 - **Heads:**
   - (a) a 256-d L2-normalised embedding, trained with a metric loss
-  - (b) an auxiliary shape classifier
-  - (c) an auxiliary colour classifier
-  - Shape and colour labels come from the NLM reference metadata, where available (see 1.4).
-- **Loss:** L = L_metric + λ₁·L_shape + λ₂·L_colour. Compare batch-hard triplet loss with ArcFace as L_metric.
+  - (b) an auxiliary shape classifier (13 shapes)
+  - (c) an auxiliary colour classifier (12 colours, multi-label, since two-tone pills have two)
+  - Labels come from the C3PI metadata (see 1.4).
+- **Loss:** L = L_metric + λ₁·L_shape + λ₂·L_colour, with ArcFace (baseline) or batch-hard triplet as L_metric.
 
 ### 2.2 Training protocol
-- Initialise both branches from ImageNet weights.
-- **P×K batches**, e.g. 32 pill types × 4 images each, so every batch has valid triplets. 2,389 C3PI pill types
-  have ≥ 4 consumer photos. ePillID types with fewer images are sampled with replacement plus augmentation.
-- Train only the heads for the first 5 epochs. Then unfreeze everything with a lower learning rate and
-  layer-wise decay on the ViT.
+- Initialise VGG16 from ImageNet and the ViT from its in21k checkpoint.
+- **P×K batches:** 32 groups × 4 photos in phase 1, 16 × 4 in phase 2, so every batch has valid pairs.
+- **The FER two-phase schedule** (`configs/stage2_baseline.yaml`):
+  - Phase 1, up to 25 epochs: the ViT and VGG16 blocks 1–3 frozen; the rest trains (new parts at a higher
+    learning rate than the backbone).
+  - Phase 2, up to 35 epochs: everything trains at a lower learning rate.
+  - Each phase stops early after 6 epochs without improvement on validation and keeps its best epoch; the
+    learning rate halves after 3 flat epochs.
 - **Split by pill type, not by image.** Test medications are never seen in training, which shows that enrolment
   works for new medications (section 1.3).
 - **Deduplicate across datasets:** remove the ePillID test pills from the C3PI training data, by NDC9 and then by
@@ -153,8 +158,9 @@ nearest enrolled medication, or rejected as unknown if no match is close enough.
   - small colour jitter, because colour helps identify the pill; its size is one of the ablations
   - flips mirror the imprint text, which never happens in a real photo, so flips are in the augmentation
     ablation too
-- **Compute:** the desktop RTX 4080 Super (16 GB). Batch 128 at 224 px with ConvNeXt-T + ViT-S/16 fits with mixed
-  precision. Smoke tests run on CPU or the laptop.
+- **Compute:** the desktop RTX 4080 Super (16 GB), bf16. Measured: phase 1 about 1 min per epoch, phase 2 about
+  4 min per epoch (9.5 GB at 16 × 4), so a full run takes 2–3 hours at most. Free Hugging Face CPU: about 0.3 s
+  per pill.
 
 ### 2.3 Open-set rejection
 - Score each pill by its cosine similarity to the nearest gallery entry. Each entry averages the enrolled
@@ -173,13 +179,13 @@ nearest enrolled medication, or rejected as unknown if no match is close enough.
 ### 2.5 Ablations (one factor at a time, same split and seed)
 | Factor | Arms |
 |---|---|
-| Fusion | cross-attention / concat + MLP |
+| Refinement pooling | mean over tokens (FER) / concatenated tokens |
 | L_metric | batch-hard triplet / ArcFace |
 | Colour jitter | none / small / large |
 | Flips | on / off |
 | Measured inputs | on / off |
 | Auxiliary heads | on / off (λ₁, λ₂) |
-| CNN branch | ConvNeXt-T stages 1–3 / ResNet-50 |
+| Training data | C3PI everyday photos / plus C3PI studio reference photos (D7) |
 
 Differences within about 2 points are confirmed with 3 seeds.
 
@@ -241,30 +247,27 @@ Interactions predicted by a model should never trigger a patient alert.
 ## 5. Milestones
 
 ### P0: Decisions and setup
-- [ ] **[You]** Answer the decisions D1–D6 (section 6). D1 (framework) blocks P3; the others block only
-      their own parts.
-- [ ] **[You]** Free about **110 GB** on the desktop for C3PI: about 89 GB to download (consumer photos,
+- [x] **[You]** Decisions D1, D2, D3, D5, D8 (2026-10-07); D6 and D7 (2026-10-08). D4 is open (section 6).
+- [x] **[You]** Free about **110 GB** on the desktop for C3PI: about 89 GB to download (consumer photos,
       references, metadata), plus crops and headroom.
-- [ ] **[Both]** Desktop environment, once D1 is decided. Claude writes `requirements.txt` and the setup steps;
-      you install them and run the GPU check.
+- [x] **[Both]** Desktop environment: `epills/.venv` with `requirements-data.txt` and `requirements-train.txt`
+      (PyTorch with CUDA, on Windows; 2026-10-07).
 - [x] **[Claude]** Project structure (`epills/`), roadmap, progress log, dataset notes (2026-10-06).
-- [ ] **[Claude]** From the ePillID code, confirm which fold file is the official holdout.
+- [x] **[Claude]** From the ePillID code, confirm which fold file is the official holdout (fold 4, 2026-10-07).
 
 ### P1: Data acquisition (gates G1–G6)
 - [x] **[Claude]** ePillID downloaded and checked (2026-10-06).
 - [x] **[Claude]** C3PI index and disc listings analysed: sizes per image type, photos per pill type,
       overlap with ePillID (2026-10-06).
 - [x] **[Claude]** DDInter 2.0 bulk CSVs downloaded: all 14 ATC letters (2026-10-06).
-- [ ] **[Claude]** Write `scripts/download_c3pi.py`:
+- [x] **[Claude]** Write `scripts/download_c3pi.py` (2026-10-06):
   - selective (only `C3PI_Test` JPGs, `MC_CHALLENGE_V1.0`, RxImage references and `ALLXML`)
   - resumable, checks each file's SHA-1 from the XML, logs failures
   - can be limited to a pill-type list
   - tested here on a ~200-file sample
-- [ ] **[You]** Run the full C3PI download on the desktop (84 GB; probably hours, depending on your
-      connection). Send back the summary it prints.
+- [x] **[Both]** Full C3PI download on the desktop (88.3 GB, all checked; 2026-10-07).
 - [ ] **[Claude]** Download MEDISEG (0.45 GB) and check its classes, masks and licence.
-- [ ] **[You]** Email the VAIPE authors for VAIPE / VAIPE-PCIL access (the site and the Drive link are dead).
-      Claude drafts the email. Optional: try the Roboflow mirror with a free account.
+- [x] ~~Email the VAIPE authors~~: dropped 2026-10-07 (assume no reply); MEDISEG is the cross-domain set (D5).
 - [ ] **[You]** Email the DDInter authors for a full export with management text and therapeutic
       duplications. Claude drafts the email.
 - [ ] **[You]** Buy or collect the 15–30 over-the-counter pills and 5–10 never-enrolled pills, and photograph
@@ -282,33 +285,35 @@ Interactions predicted by a model should never trigger a patient alert.
 - [ ] **[Claude]** Crops for MEDISEG (from masks) and for our own photos (from Stage 1 output, or manual boxes).
 - [x] **[Claude]** Dedup and splits (section 1.3), producing manifests in `data/processed/` and a leakage
       report.
-- [ ] **[Claude]** Attribute labels (section 1.4) and coverage statistics (gate G3).
+- [x] **[Claude]** Attribute labels (section 1.4) and coverage statistics (gate G3, 2026-10-07).
 - [x] **[You]** Review the crop sample and the leakage report; approve gate G2 (2026-10-07).
 
-### P3: Model (needs D1, D2)
-- [ ] **[Claude]** Backbones, the two fusion arms, the measured-input MLP, the three heads, triplet and ArcFace
-      losses, P×K sampler, augmentations, layer-wise LR decay.
-- [ ] **[Claude]** Smoke tests on CPU or the laptop: shapes, one training step, freezing and unfreezing,
-      save and load, a tiny overfit test on 10 pill types.
+### P3: Model
+- [x] **[Claude]** The FER hybrid in PyTorch, Stage 2 heads, ArcFace and triplet losses, P×K sampler,
+      augmentations, validation metrics, training script and config (2026-10-07).
+- [x] **[Claude]** Tests: parity with the TensorFlow blocks, matching, sampler, layout; a 10-group overfit test
+      reaches 96% top-1 (2026-10-07).
 
 ### P4: Training and ablations
-- [ ] **[You]** Run the main training on the desktop with the config Claude provides; send back the run log.
+- [x] **[Both]** Baseline run (`configs/stage2_baseline.yaml`, 1 h 46 min): collapsed to ~3 embedding dimensions
+      (new layers at 1e-3) (2026-10-08).
+- [x] **[Claude]** Run 2 (`configs/stage2_run2.yaml`, 98 min): FER learning rates, faster ArcFace table, margin
+      warm-up. All four validation targets met (2026-10-08).
 - [ ] **[Claude]** Read the logs and pick the next run; keep the ablation table (2.5) up to date.
 - [ ] **[You]** Run the ablation arms (each roughly 1–3 h; the first epoch's time is the real estimate).
 
 ### P5: Open-set calibration
-- [ ] **[Claude]** Threshold and δ on validation for the safety target; the reports.
+- [x] **[Claude]** Threshold and δ on validation for the safety target (`scripts/calibrate_stage2.py`; run 2:
+      threshold 0.793, δ 0.170, 2026-10-08).
 
 ### P6: Evaluation
 - [ ] **[Both]** ePillID official and strict; MEDISEG (and VAIPE); our own pills. Claude writes the evaluation
       scripts, you run them on the desktop.
 
 ### P7: Stage 3 safety engine
-- [ ] **[Claude]**
-  - map DDInter drug names to RxNorm ingredients
-  - pair lookup, same-ingredient duplication, and the double-dose / missed / unknown rules
-  - openFDA warnings lookup
-  - unit tests on known pairs
+- [x] **[Claude]** DDInter -> RxNorm mapping and database; interaction and duplication rules; double-dose, missed,
+      unknown and unsure rules; openFDA warnings; unit tests and a live check (2026-10-08).
+- [x] **[You]** D6: ungraded interactions on screen only (2026-10-08).
 - [ ] **[You]** Have a pharmacist or your supervisor review the alert wording and severity mapping.
 
 ### P8: Imprint OCR (stretch)
@@ -319,6 +324,13 @@ Interactions predicted by a model should never trigger a patient alert.
 ### P9: Write-up
 - [ ] **[Both]** Results tables with CIs, ablations, the cross-domain gap, a failure gallery and limitations.
 
+### P10: API and hosting (Hugging Face Spaces)
+- [x] **[Claude]** Hosted / not-hosted layout, FastAPI skeleton with `/health`, Dockerfile (2026-10-07).
+- [x] **[Claude]** Stage 3 endpoints: `/v1/safety/medications`, `/v1/safety/dose`, `/v1/safety/label` (2026-10-08).
+- [ ] **[Claude]** `/v1/embed` and `/v1/match` on the trained model.
+- [ ] **[You]** Hugging Face account, a model repo for the weights, and the Space; then share the API with the
+      app team.
+
 ---
 
 ## 6. Decisions needed
@@ -326,10 +338,12 @@ Interactions predicted by a model should never trigger a patient alert.
 |---|---|---|---|---|
 | D1 | Framework | PyTorch / TensorFlow | **Decided 2026-10-07: PyTorch** (a port of the FER model). Reasons: `timm` has ConvNeXt-T and ViT-S/16 with ImageNet weights, `pytorch-metric-learning` has batch-hard triplet and ArcFace, TrOCR is PyTorch-first, and it runs on the GPU on native Windows (no WSL2) | P3 |
 | D2 | CNN branch for the main model | ConvNeXt-T stages 1–3 / ResNet-50 | **Decided 2026-10-07: VGG16 + CBAM, as in the FER model**; ConvNeXt-T only as an ablation. Earlier recommendation, ConvNeXt-T: its 14×14 map matches the ViT grid for cross-attention; ResNet-50 as an ablation | P3 |
-| D3 | Reuse parts of the earlier hybrid (CBAM, capsule fusion) as extra arms? | yes / no | No by default; keeps the ablation focused on the two planned fusion arms | P3 |
+| D3 | Reuse parts of the earlier hybrid (CBAM, capsule fusion) as extra arms? | yes / no | **Superseded by D2** (2026-10-07): the main model is the earlier hybrid | — |
 | D4 | Measured inputs on public data | A: metadata size + noise / B: own photos only | A for training, and report B as the real test | P2, P3 |
-| D5 | Cross-domain set if VAIPE stays unavailable | MEDISEG only / MEDISEG + Roboflow VAIPE mirror | MEDISEG as primary, VAIPE as a bonus | P6 |
-| D6 | How to show DDInter's "Unknown" severity | as Moderate / screen only / hide | As Moderate with "severity not graded" | P7 |
+| D5 | Cross-domain set if VAIPE stays unavailable | MEDISEG only / MEDISEG + Roboflow VAIPE mirror | **Decided 2026-10-07: MEDISEG.** VAIPE copies only as Stage 1 extra training data | P6 |
+| D6 | How to show DDInter's "Unknown" severity | as Moderate / screen only / hide | **Decided 2026-10-08: screen only**, as its own level `ungraded` (grey, not spoken). As Moderate, a common 4-medication list gave a dozen spoken alerts | P7 |
+| D7 | Add C3PI's studio reference photos (9,116) to training? | no / yes | **Decided 2026-10-08: yes, as run 3**, references of training groups only (6,198 crops); run 2 without them is the comparison | P4 |
+| D8 | Hosting | Hugging Face Spaces / on-device only | **Decided 2026-10-07: Spaces (free CPU) for the prototype**; crops are sent to the API (non-commercial demo) | P10 |
 
 ## 7. Decision log
 | Date | Decision | Reason |
@@ -341,6 +355,16 @@ Interactions predicted by a model should never trigger a patient alert.
 | 2026-10-06 | Report the ePillID official protocol and a strict novel-medication protocol | The official one trains on all pill types' reference images |
 | 2026-10-06 | MEDISEG added as a cross-domain test | VAIPE's download links are dead; MEDISEG is open (CC BY 4.0) and checked |
 | 2026-10-06 | Stage 3 uses fixed rules on curated data; GNN and DDI Corpus 2013 removed | Alerts must come from sources a pharmacist can verify |
+| 2026-10-07 | Splits by appearance group; look-alikes of ePillID fold-4 pills also removed | Identical pills sold under several codes would otherwise leak into the test |
+| 2026-10-07 | Code split into hosted (`serving/`, `src/epills/core/`) and not hosted (`src/epills/training/`) | The API must deploy without training code or data |
+| 2026-10-07 | PyTorch port of the FER hybrid as the Stage 2 model (D1, D2) | Reuses our own architecture; GPU on Windows; metric-learning tools |
+| 2026-10-07 | VAIPE dropped; MEDISEG is the cross-domain test (D5) | VAIPE's links are dead; assume the authors never reply |
+| 2026-10-07 | Hosted prototype on Hugging Face Spaces; crops leave the phone (D8) | Non-commercial demo; simplest way to give the app team an API |
+| 2026-10-08 | Validation targets for "usable" (progress log) | A clear go / no-go for the baseline before tuning |
+| 2026-10-08 | D6: DDInter's ungraded pairs on screen only (`ungraded`, not spoken) | Alert fatigue: as Moderate, common lists gave a dozen spoken alerts |
+| 2026-10-08 | Train the new layers at the FER rates; ArcFace table at 1e-3; margin warm-up (run 2) | Run 1's 1e-3 for the new layers collapsed the embeddings; run 2 meets all validation targets |
+| 2026-10-08 | D7: run 3 adds the training groups' studio reference photos | Run 2 failed on studio references (ePillID MAP@1 12%) and other photo conditions (MEDISEG 40%) |
+| 2026-10-08 | Open-set metrics measured per patient-sized gallery of 10 | Against all 214 medicines an unknown pill nearly always has a look-alike; the app compares with one patient's list |
 
 ## 8. Risks
 | Risk | Mitigation |
