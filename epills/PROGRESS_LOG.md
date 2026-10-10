@@ -5,14 +5,16 @@ Newest entry first. The plan, gates and decisions are in [ROADMAP.md](ROADMAP.md
 
 ---
 
-## Where we are (2026-10-08)
+## Where we are (2026-10-09)
 
 Data for Stage 2 is ready and checked (gates G1–G3 passed). Your FER model is ported to PyTorch. Run 1 (the
 baseline) collapsed because of a learning-rate choice in the port; run 2 fixed it and meets all four validation
 targets. **Run 3 (+ C3PI studio reference photos, D7) is the best model**: calibrated (threshold 0.831, flip
 margin 0.150), 84% top-1 over 200 held-out medicines, ePillID MAP@1 37% (run 2: 12%). It still **doesn't
-generalise well to other phones and conditions** (MEDISEG 42%). Next: decide on run 4 (domain augmentation).
-Stage 3 and its API endpoints are built and work locally.
+generalise well to other phones and conditions** (MEDISEG 42%).
+The API now also names pills (from the patient's list or a 4,936-pill catalogue), shows pictures by name and
+scans a whole photo in one call (docs/features.md); all work locally on CPU. Run 4 (other photo conditions) is
+training.
 
 ## Plan at a glance
 
@@ -28,15 +30,16 @@ Stage 3 and its API endpoints are built and work locally.
 | P7 Stage 3 safety engine | DDInter + RxNorm rules, dose checks, openFDA | 🟡 built and tested 2026-10-08 | Pharmacist or supervisor review of the wording | You |
 | P8 Imprint OCR | TrOCR tie-breaker (stretch goal) | ⬜ optional | — | — |
 | P9 Write-up | Report, tables, figures | ⬜ last | — | You; Claude drafts |
-| P10 API and hosting | FastAPI on Hugging Face Spaces (free) | 🟡 Stage 3 endpoints work locally | Hugging Face account and Space (you); `/v1/embed` and `/v1/match` once the model is trained | You; Claude |
+| P10 API and hosting | FastAPI on Hugging Face Spaces (free) | 🟡 all endpoints work locally on CPU (2026-10-09): Stage 3, `/v1/embed`, `/v1/match`, `/v1/scan`, `/v1/identify`, `/v1/pills/*` | Hugging Face account, model repo and Space (you); then upload and deploy (Claude) | You; Claude |
 
 **Up next, in order:**
-1. Decide on run 4 (domain augmentation: lighting, white balance, downscale/blur, JPEG, backgrounds,
-   neighbouring pills), on top of run 3. Run 3 is the current best model (references helped ePillID 3x; MEDISEG
-   barely moved).
-2. Own pill photos (G5): skipped for now; still the deciding test when photos exist.
-3. `/v1/embed` and `/v1/match` in the API, serving run 3's model (CPU) until a better one exists.
-4. Deploy the API to Hugging Face (needs your account and a model repo).
+1. Choose the model to serve: run 3 (best in C3PI conditions) or run 4 (better on other phones, safer there).
+   Next modelling step: make the threshold transfer to new phones (it now rejects most own pills there).
+2. Deploy the API to Hugging Face (needs your account and a model repo): model, catalogue, safety database.
+3. F4 (merging detection into the model): your talk with the Stage 1 teammate; also agree the box format.
+4. Own pill photos (G5): skipped for now; still the deciding test when photos exist.
+
+New features and their status: [docs/features.md](docs/features.md).
 
 **Is the model usable? Targets on validation** (proposed 2026-10-08 for the prototype; agree them with your team):
 
@@ -94,6 +97,214 @@ Note on older entries: before 2026-10-07 (night) the cropper lived in `src/epill
 `src/epills/training/datasets/`. Their "Next" lists are history; the current plan is the table above.
 
 ---
+
+## 2026-10-10 (afternoon): API guide for the web app, Hugging Face deployment, monthly retraining
+
+- **docs/API.md**: every endpoint with request/response examples, the main flows (enrol, dose check, identify,
+  pictures, safety, opt-in photos), errors, and browser (fetch) examples, for the web teammate.
+- **API v0.4.0**: CORS for browser calls (`EPILLS_CORS_ORIGINS`), optional key (`EPILLS_API_KEY`, header
+  `X-API-Key`), the catalogue as one `catalogue.tar` download, version pinning for rollback
+  (`EPILLS_MODEL_REVISION`), and opt-in photo collection: `POST /v1/feedback` (consent required; pill crop only, no
+  EXIF; pushed to a private dataset repo every 10 min) and `DELETE /v1/feedback/{consent_id}` (withdrawal).
+- **scripts/deploy_hf.py** (`assets`, `space`, `feedback`, `restart`) and **docs/DEPLOY.md** (step by step): private
+  model repo for the assets (tagged per model version), a Docker Space with only the hosted code (staging checked:
+  24 files, all 12 `/v1` routes load), settings and secrets set by the script.
+- **Monthly retraining: a prototype only; you're just considering it (2026-10-10), so it is not in use** (collection off by default, no schedule).
+  **scripts/monthly_retrain.py** (`pull`, `build`, `train`, `check`, `publish`): fine-tunes the live model on the
+  month's verified photos, then a release gate against the live model and a report; publishing only after a
+  person approves. `outputs/serving/served_run.txt` records the live run (written by `export_model.py`).
+- New-feature status: F1–F3 are API features, independent of the training run; the catalogue must be rebuilt for
+  the served model. The OCR re-ranking is not yet in `/v1/identify`.
+- 52 tests pass.
+
+---
+
+## 2026-10-10: imprint re-ranking (OCR) beats the paper's GAP@1; run 6 (stronger fine-tuning) started 11:29
+
+- Your decision: imprint OCR re-ranking, then run 6 at the higher learning rate.
+- **OCR** (`src/epills/core/imprint/ocr.py`): Florence-2 (MIT licence, via transformers 5.19, no new packages),
+  the pill region read in 4 rotations. On 150 validation crops a token of the pill's own imprint is read on **43%**
+  (base; printed 63%, debossed 36%; C3PI "Clear" 74%, "Can not Identify" 0%), a random other pill's on 0.7%; 0.28 s
+  per pill on the GPU. Florence-2-large reads 47% at twice the time; base kept (fast enough for the API on CPU).
+- **Re-ranking** (`src/epills/core/imprint/match.py`): a candidate's recorded imprint tokens (C3PI metadata, by
+  NDC9; known for 2,396 of the 4,902 ePillID types) are looked for in the reads; rare tokens weigh more (IDF); the
+  top_k candidates get + alpha x score. **Chosen on validation only** (`scripts/evaluate_imprint.py`; 2,500
+  validation photos of 250 types against all 4,902 types' references): alpha 0.3, top_k 500 (validation MAP
+  0.445 → 0.599).
+- **ePillID test, run 5 + imprint** (a separate variant: it uses imprint text the paper's model didn't):
+
+  | two-sided | Run 5 plain | Run 5 + imprint | Paper |
+  |---|---|---|---|
+  | MAP / MAP@1 | 0.597 / 45.7% | **0.780 / 69.0%** | 0.958 / 92.0% |
+  | GAP / GAP@1 | 0.207 / 0.526 | 0.598 / **0.921** | 0.812 / 0.912 |
+  | top-5 | 77.5% | 89.6% | – |
+
+  Single photo: MAP 0.542 → 0.658. 43% of the test photos have a token of their own imprint read.
+- **Run 6** restarted 11:29 (`configs/stage2_run6_official.yaml`, unchanged). Epoch 1 already above run 5's best on
+  validation (gallery-10 AUROC 0.980 vs 0.975, correct@95% 88.2% vs 85.7%). After
+  training: calibration, ePillID and MEDISEG, and the imprint re-ranking re-tuned on validation, all automatic.
+- **Run 6 result** (11:29–13:00, early stop after 26 epochs, best epoch 18; window 1.4, threshold 0.840, margin
+  0.150; imprint re-ranking re-tuned on validation: alpha 0.3, top_k 500 again):
+
+  | | Run 5 | Run 6 |
+  |---|---|---|
+  | Validation top-1 over 214 / gallery-10 AUROC / correct@95% | 83.1% / 0.975 / 85.7% | **86.9% / 0.982 / 89.9%** |
+  | MEDISEG top-1 over 32 (pills over 100 px) | 52.3% (71.2%) | **54.1% (74.3%)** |
+  | ePillID two-sided MAP / MAP@1, plain | **0.597 / 45.7%** | 0.570 / 40.4% |
+  | ePillID two-sided + imprint: MAP / MAP@1 / GAP@1 | **0.780 / 69.0% / 0.921** | 0.774 / 68.1% / 0.886 |
+
+  Stronger fine-tuning helped everyday-to-everyday matching (validation, MEDISEG) but not everyday-to-studio
+  (ePillID). The epoch is picked on validation top-1 (everyday photos only), which doesn't reward the benchmark's
+  task; and few batches pair a class's everyday photos with its references. So the remaining ePillID gap is the
+  everyday-vs-studio domain gap, not underfitting.
+- **Run 7, benchmark-aligned training** (your choice; `configs/stage2_run7_official.yaml`), started 13:31 from
+  run 6 (with its saved ArcFace table), same data, architecture and learning rate:
+  - **Epoch picked on a validation benchmark** (`select_metric: ref_map`): 4,280 validation everyday photos against
+    the 9,804 references of all 4,902 ePillID types (validation types' references never trained on); MAP.
+  - **Domain-paired batches**: a pill with both kinds of photo contributes 2 references + 2 everyday photos
+    (`sampler.pair_domains`), plus a batch-hard triplet term (weight 0.5) next to ArcFace, whose hardest positives
+    are then mostly everyday vs reference.
+  - Smoke test: starts at validation ref MAP 0.481 (top-1 34.3%).
+  - Afterwards automatically: calibration, ePillID, MEDISEG, imprint re-ranking re-tuned on validation.
+- **Run 7 result** (13:31–14:40, early stop after 18 epochs, best epoch 12): validation ref MAP 0.481 → **0.514**
+  only, though the training loss kept falling (ArcFace 5.4 → 3.4; the triplet term stayed tiny, 0.04 → 0.02:
+  few hard cases in the batches). ePillID two-sided: plain MAP 0.578 / MAP@1 40.7%; + imprint 0.774 / 67.6% /
+  GAP@1 0.916. MEDISEG 53.3%. Validation: correct@95% 91.2%. Window 1.7, threshold 0.782, margin 0.190.
+- **Three training changes (runs 5–7) all land at ePillID MAP ~0.57–0.60 plain, ~0.78 with imprint.**
+- **What the paper's own tables show** (arXiv 2005.14288v2, Table 1–2; code: `src/pillid_datasets.py`, `losses.py`,
+  `arguments.py`):
+  - Plain softmax classifiers score MAP 0.55–0.73 (ResNet-18 GAP 0.547 … ResNet-152 B-CNN 0.727): our 0.60 is in
+    this range.
+  - Their multi-head metric-learning recipe lifts even ResNet-18 (plain pooling) to 0.912, ResNet-152 + CBP to
+    0.958. The gain comes from the recipe, not the backbone or the pooling.
+  - Loss ablation (ResNet-50, validation GAP): softmax alone 61.8 → + contrastive + triplet 75.5 → + ArcFace 0.1
+    77.2.
+  - Recipe: Adam 1e-4 for the whole network (halved on plateau, patience 2); 2,048-d embedding; contrastive (margin
+    1, Euclidean) + triplet with online hard mining; softmax and ArcFace over side classes (front and back
+    separate); batches of 48 built per pill: its 2 references + its consumer photos + a random pill's references;
+    trained on ePillID's own consumer photos (folds 0–3) + all references.
+- **Decision (you, 2026-10-10): stop the benchmark work and report.** Results written up in
+  [docs/stage2_results.md](docs/stage2_results.md) (draft for the report, P9): validation targets, strict test
+  results of runs 2–4, the ePillID comparison (runs 5–7, ± imprint; GAP@1 beats the paper, MAP doesn't), the
+  diagnosis, limitations and future work (first: the paper's multi-head recipe on our architecture).
+
+## 2026-10-09 (night): run 5, a benchmark model under ePillID's official protocol (started 21:47)
+
+- Goal (yours): beat the ePillID paper (two-sided MAP 95.76, MAP@1 92.01). Not like for like so far: the paper
+  trains on the reference photos of **all** 4,902 types, test types included, and those photos are the test
+  gallery; our runs 3–4 never see a test type (run 4: MAP 0.555, MAP@1 42.3%).
+- **Run 5 follows the official protocol** (`scripts/add_epillid_refs.py`, `configs/stage2_run5_official.yaml`):
+  run 4 + ePillID's own 9,240 reference photos, **including all 384 of the 192 test types**; validation types'
+  references left out (498, keeps validation clean; slightly stricter than the paper); 3,500 reference-only types
+  as new classes (24 left out as look-alikes of validation pills; 42 ambiguous pack parts outside the test set
+  left out). No test-type everyday photo is trained on (checked: 0). Training: 44,909 photos, 5,387 classes;
+  classes drawn by sqrt(photos) so the reference-only classes don't crowd out everyday photos (batches: 45%
+  everyday, 44% ePillID references, 10% C3PI references). Colour loss now skips photos without a colour label.
+- **A benchmark model only:** it has seen the test types' references, so the C3PI held-out and unknown-pill tests
+  don't apply to it; validation, ePillID official and MEDISEG do. The app keeps the strict model (run 3 or 4).
+- Fixed before results: the test protocol and metrics as before (two-sided pairs, gallery of all 4,902 types'
+  references, window chosen on validation); main result without test-time augmentation.
+- Epoch 1: validation gallery-10 top-1 74.4% (run 4: 70.7%).
+- **Result (153 min, best phase 2 epoch 34; window 1.4, threshold 0.906, margin 0.100):**
+
+  | ePillID official, two-sided | Run 4 (strict) | Run 5 (official protocol) | Paper |
+  |---|---|---|---|
+  | MAP / MAP@1 | 0.555 / 42.3% | **0.598 / 45.7%** | 0.958 / 92.0% |
+  | GAP / GAP@1 | – | 0.207 / 0.526 | 0.812 / 0.912 |
+  | top-5 | 72.0% | 77.5% | – |
+
+  **Not beaten**: training on the test types' references added only ~4 points. MEDISEG improved to its best yet
+  (top-1 52.3%; pills over 100 px 71%). Validation: gallery-10 top-1 97.7%, correct@95% 85.7% (margin 0).
+- **Diagnosis** (no training; run 5's model):
+  - Everyday photo → its type among all 4,902 types' references: test types 40% top-1 / 71% top-5; **types
+    trained with everyday photos and references: only 54% / 83%**. So the model gets colour and shape right but
+    can't separate look-alikes, even for pills it trained on.
+  - Not the photo style: our own crops of the test photos do worse (29%) than ePillID's (40%).
+  - **Not the 64-number mean-pool**: single-photo top-1 by network stage: ViT CLS (768) 35.6%, VGG branch (256)
+    37.6%, both concatenated 45.4%, capsule fusion 40.0%, refinement (64) 40.8%, embedding 40.4%.
+  - **The limit is the global summaries the backbones hand over**: the ViT's CLS token and VGG's average pool
+    each reduce the whole image to one vector before fusion. Fine for facial expressions (global configuration),
+    weak for pills, whose identity is in small imprint strokes. The paper's model uses bilinear pooling of local
+    features, a design made for fine-grained recognition.
+- Options (architecture changes, so your decision): local-detail pooling into the fusion; higher input resolution;
+  imprint reading (OCR) to re-rank; training-only tweaks (small gains).
+- You chose local-detail pooling and imprint OCR (2026-10-10). Then two findings changed the order:
+  - Local pooling of run 5's own backbone features (no training) is no better than the global summaries
+    (36–39% each; ~44% combined), so the detail isn't in the features yet, whichever way they're pooled.
+  - **Runs 3–5 underfit**: best epoch = last epoch, and the loss still falling (run 5 phase 2: 8.4 → 6.2) when the
+    learning rate had decayed to 5e-6.
+- **Run 6** (`configs/stage2_run6_official.yaml`): continue run 5's weights in phase 2 at 3e-5 (ArcFace table 3e-4,
+  rebuilt from class-mean embeddings since run 5 didn't save it; `best.pt` now saves the table) for up to 30
+  epochs. Started 00:41, **stopped at your request before its first epoch**; ready to start again. Local pooling
+  parked until the backbones are better trained; OCR still to do.
+
+## 2026-10-09 (evening): run 4 (stage2_run4, other photo conditions + jittered crop windows). More robust, slightly less accurate in C3PI conditions
+
+- 19:03–21:21 (133 min), all 25 + 35 epochs, best at the last epoch (still creeping up). `dims` ~12.
+- Calibrated with the window chosen on validation: **1.55×** (1.3–2.0 all within 1.1 points), threshold **0.895**,
+  margin **0.115**. Each model below is scored with its own validation-chosen window (run 2: 1.7×, default).
+
+  | | Run 2 | Run 3 (+ refs) | Run 4 (+ refs + robustness) |
+  |---|---|---|---|
+  | **Validation** correct@95%, 10 medications, margin 0 | 90.7% | 89.7% | 87.2% |
+  | **C3PI held-out** top-1 over 200 | 82.0% | **84.4%** | 83.2% |
+  | C3PI held-out app: correct / wrong / own rejected / unknown rejected | 78.6 / 0.1 / – / 94.2% | **80.4** / 0.0 / 9.9 / 94.1% [correct 78.0–82.7] | 76.0 / 0.0 / 14.5 / 94.8% [73.4–78.6] |
+  | **ePillID** two-sided MAP@1 / top-5 / MAP | 13.7% / 38.2% / 0.255 | 37.1% / 67.3% / 0.506 | **42.3% / 72.0% / 0.555** |
+  | **MEDISEG** top-1 over 32 | 38.9% | 41.8% | **48.2%** |
+  | MEDISEG by pill size: under 50 / 50–100 / over 100 px | – | 29.6 / 29.9 / 56.8% | **37.3 / 36.4 / 62.2%** |
+  | MEDISEG app: correct / wrong / own rejected / unknown rejected | 17.6 / 1.1 / 51.5 / 78.7% | 18.7 / 1.0 / 64.2 / 89.3% | 18.7 / **0.7** / 70.4 / **93.1%** |
+  | MEDISEG-Deploy 10-shot (40 pills): top-1; correct / wrong / flip / rejected | 35%; 6 / 1 / 10 / 23 | 52.5%; 6 / 0 / 4 / 30 | 45%; 3 / 0 / 1 / 36 |
+
+- **Reading:**
+  - Run 4 recognises pills in other conditions better: MEDISEG +6.4 points (small pills +7), ePillID +5 points,
+    and is safer there (fewer wrong matches, more unknown pills rejected).
+  - It is slightly worse in C3PI conditions: held-out top-1 −1.2 points, and in the app scenario it names 76.0%
+    instead of 80.4% (it rejects more of the patient's own pills: 14.5% vs 9.9%). Wrong matches stay at 0.0%.
+  - In MEDISEG's app scenario, correct matches don't rise (18.7% for both): the better recognition is cancelled
+    by the threshold, which is set on C3PI photos and is too strict for other phones (70% of own pills rejected).
+    **The threshold's transfer to new phones is now the main barrier**, more than recognition itself.
+  - MEDISEG-Deploy has only 40 pills; differences of a few pills are noise.
+- Which to serve is your call (below). Both exports and catalogues can be swapped in minutes.
+
+---
+
+## 2026-10-09: New features (pill → name, name → picture, one-call scan), the pill catalogue, run 4 started
+
+- **Feature backlog** written: [docs/features.md](docs/features.md) (F1–F6), with the continual-learning design
+  (F5) checked against Singapore's PDPA, HSA GL-04 Revision 4 (Dec 2025) and MOH/HSA AIHGle 2.0 (Mar 2026).
+  F4 (merging detection into the recognition model) paused until you talk with the Stage 1 teammate.
+- **Model for serving:** `scripts/export_model.py` → `outputs/serving/stage2_model.pt` (run 3, 204 MB in half
+  precision, same embeddings: min cosine 1.00000), with its calibration and a version (`stage2_run3@2026-10-08`).
+- **Catalogue** (`scripts/build_catalogue.py` → `data/processed/catalogue/`, 201 MB): 4,936 C3PI pill types,
+  32,811 embeddings (13,730 reference crops of all pill types + up to 8 everyday crops each), 8,939 display
+  pictures; RxNorm ingredients for 4,710 (95%; retired NDCs resolved through RxNav's NDC status).
+  Self-check, new everyday photos against the catalogue: right product first 70% (never-trained types) / 77%
+  (validation types) / 89% (trained types); top 5: 93% / 95% / 98%.
+- **API** (v0.3.0, `serving/app/main.py`): `/v1/embed`, `/v1/match`, `/v1/scan`, `/v1/identify`,
+  `/v1/pills/search`, `/v1/pills/{id}`, `/v1/pills/{id}/image/{n}`, besides the Stage 3 endpoints. Model and
+  catalogue load once (or at start-up with `EPILLS_PRELOAD=1`); the catalogue must match the served model version.
+  Hosted code still never imports training code. 46 tests pass.
+- **Live test on CPU** (real model and catalogue, held-out C3PI photos):
+  - `/v1/match`, 3 enrolled medicines: 5 of 6 own pills named right, 1 rejected as unknown (similarity 0.830 vs
+    threshold 0.831), the never-enrolled pill rejected. ~0.15 s per pill after a one-off 14 s model load.
+  - `/v1/identify`: right product first (famotidine, TEVA 5729); with the typed imprint, the only candidate.
+  - `/v1/pills/search`: "metformin" 74 products, "Glucophage" → metformin (71), "lipitor 10" → atorvastatin.
+  - `/v1/scan` on MEDISEG-Deploy's mixed photos with the dataset's boxes: all 40 pills "unknown" (as offline: the
+    model is weak on these phones and small pills); the stand-in finder found 1 of 40 pills on their cluttered
+    backgrounds, so `/v1/scan` needs the real detector there.
+- **Crop window finding:** in the training crops the pill alone fills a median 59% of the frame, so a *tight*
+  box (detector, MEDISEG, ePillID) needs a window of ~1.7×, not the 1.4× used so far (the C3PI cropper's 1.4
+  applies to its own boxes, which include the shadow). Re-scored runs 2 and 3 with 1.7 (old results kept in
+  `eval_window1.4/`): no real change (run 3: ePillID MAP@1 36.6% vs 37.1%, MEDISEG 39.7% vs 41.8%, MEDISEG-Deploy
+  10-shot 40% vs 52.5% on 40 pills). Since the window may not be chosen on test sets, it is now chosen on
+  validation in calibration (`--windows`) and travels with the exported model.
+  Run 3's validation sweep (correct matches at 95% unknown rejection, 10 medications): 1.3× 89.2%, 1.4× 89.7%,
+  1.55× 89.7%, 1.7× 89.1%, 1.85× 88.0%, 2.0× 86.8% → **1.4×** (threshold 0.819, margin 0.155; the old calibration on
+  cropper crops: 0.831 / 0.150). Test sets with it: C3PI held-out correct 80.4%, unknown rejected 94.1%; ePillID and
+  MEDISEG recognition unchanged (37.1%, 41.8%). Re-exported; the served model now carries window 1.4.
+- **Run 4** (`configs/stage2_run4.yaml`) started 19:03: run 3 + jittered crop windows (×0.75–1.35, shift ±10%) and
+  photo conditions (brightness/contrast ±30%, white balance ±8%, downscale to 40–160 px, JPEG 30–90, noise,
+  another pill pasted at an edge); previewed before starting.
 
 ## 2026-10-08 (night): run 3 (stage2_run3, D7 reference photos). Big gain on studio references; other conditions barely move
 

@@ -1,8 +1,13 @@
 # What the hosted API installs. Keep it to run-time needs only: no training, plotting or data-preparation packages.
-# The model's packages (torch CPU wheels, torchvision, transformers) are added with /v1/embed and /v1/match.
+# In the Docker image, torch and torchvision are installed first from the CPU-only index (much smaller), so pip
+# finds them already satisfied here.
 fastapi>=0.115
 uvicorn[standard]>=0.30
 python-multipart>=0.0.9   # image uploads
 numpy>=2.1
 pillow>=11
-huggingface_hub>=0.24     # downloads safety.sqlite (and later the weights) from the Hugging Face repo
+huggingface_hub>=0.24     # downloads the model, catalogue and safety.sqlite from the Hugging Face repo
+torch>=2.6                # the Stage 2 model (CPU)
+torchvision>=0.21         # VGG16 and the input transform
+transformers>=4.45        # ViT-B/16
+opencv-python-headless>=4.10   # the stand-in pill finder (/v1/scan)

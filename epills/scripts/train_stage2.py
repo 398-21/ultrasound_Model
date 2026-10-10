@@ -32,7 +32,8 @@ sys.path.insert(0, str(EPILLS_ROOT / "src"))
 from epills.core.models.hybrid import HybridPillNet  # noqa: E402
 from epills.training.datasets.pills import (PillCrops, PKSampler, Vocab, eval_transform, load_manifest,  # noqa: E402
                                             train_transform)
-from epills.training.eval.retrieval import embed, evaluate  # noqa: E402
+from epills.training.datasets.epillid import references as epillid_references  # noqa: E402
+from epills.training.eval.retrieval import embed, evaluate, reference_retrieval  # noqa: E402
 from epills.training.losses.metric import ArcFace, auxiliary_losses, batch_hard_triplet  # noqa: E402
 
 
@@ -90,7 +91,8 @@ def main():
     else:
         known_df, unknown_df = manifest[manifest.split == "val_enrolled"], manifest[manifest.split == "val_unknown"]
 
-    train_set = PillCrops(train_df, images, train_transform(cfg["augment"]["colour_jitter"]), vocab)
+    aug = cfg["augment"]
+    train_set = PillCrops(train_df, images, train_transform(**aug), vocab, neighbour_p=aug.get("neighbour_p", 0.0))
     eval_tf = eval_transform()
     known_set, unknown_set = PillCrops(known_df, images, eval_tf, vocab), PillCrops(unknown_df, images, eval_tf, vocab)
     workers = cfg["data"]["workers"]
@@ -99,6 +101,21 @@ def main():
     unknown_loader = DataLoader(unknown_set, batch_size=cfg["eval"]["batch"], **loader_kw)
     print(f"train: {len(train_set):,} photos, {len(train_set.label_index):,} groups | eval known: {len(known_set):,} "
           f"photos, {known_df.label.nunique()} groups | unknown: {len(unknown_set):,} photos | device {device}", flush=True)
+
+    ref_gallery = None
+    if cfg["eval"].get("reference_gallery"):
+        # benchmark-aligned validation: validation everyday photos against ePillID's references of all 4,902 types
+        # (validation types' references are never trained on), scored by MAP (retrieval.reference_retrieval)
+        refs = epillid_references(images)
+        classes = {c: i for i, c in enumerate(sorted(refs.pilltype_id.unique()))}
+        type_of_ndc = refs.drop_duplicates("ndc9").set_index("ndc9").pilltype_id
+        q_cls = pd.concat([known_df, unknown_df]).ndc9.map(type_of_ndc).map(classes)
+        ref_set = PillCrops(refs.assign(label=refs.pilltype_id, shape="", color=""), images, eval_tf, vocab)
+        ref_gallery = {"loader": DataLoader(ref_set, batch_size=cfg["eval"]["batch"], **loader_kw),
+                       "ref_cls": refs.pilltype_id.map(classes).to_numpy(), "mask": q_cls.notna().to_numpy(),
+                       "q_cls": q_cls.dropna().astype(int).to_numpy(), "n": len(classes)}
+        print(f"reference gallery: {len(refs):,} references of {len(classes):,} types; "
+              f"{int(ref_gallery['mask'].sum()):,} validation photos with an ePillID type", flush=True)
 
     mcfg, lcfg = cfg["model"], cfg["loss"]
     model = HybridPillNet(embedding_dim=mcfg["embedding_dim"], refine_pool=mcfg["refine_pool"],
@@ -111,6 +128,26 @@ def main():
     else:
         metric_module = torch.nn.Module()
         metric_loss = lambda emb, lab: batch_hard_triplet(emb, lab, lcfg["triplet_margin"])  # noqa: E731
+
+    if cfg.get("init_from"):  # continue from a trained run (e.g. more fine-tuning at a stronger learning rate)
+        init = torch.load(EPILLS_ROOT / cfg["init_from"], map_location="cpu", weights_only=False)
+        model.load_state_dict(init["model"])
+        saved = init.get("metric_state") or {}
+        if isinstance(metric_module, ArcFace) and "weight" in saved and saved["weight"].shape == metric_module.weight.shape:
+            metric_module.load_state_dict(saved)
+            how = "its ArcFace table"
+        elif isinstance(metric_module, ArcFace):
+            # no saved table (runs before 2026-10-10): rebuild it from each class's mean embedding
+            plain = PillCrops(train_df, images, eval_tf, vocab, label_index=train_set.label_index)
+            emb, lab = embed(model, DataLoader(plain, batch_size=cfg["eval"]["batch"], num_workers=workers), device)
+            table = np.zeros((len(train_set.label_index), emb.shape[1]), np.float32)
+            np.add.at(table, lab, emb)
+            table /= np.maximum(np.linalg.norm(table, axis=1, keepdims=True), 1e-12)
+            metric_module.weight.data = torch.from_numpy(table).to(device)
+            how = "an ArcFace table rebuilt from class-mean embeddings"
+        else:
+            how = "no metric table"
+        print(f"initialised from {cfg['init_from']} with {how}", flush=True)
 
     # ArcFace margin warm-up: the margin grows from 0 over the first epochs. With the full margin from the start, the
     # quickest way to lower the loss is to squeeze every embedding onto a few dimensions (the baseline collapsed to ~3).
@@ -125,7 +162,11 @@ def main():
         plateau = cfg["plateau"]
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max", factor=plateau["factor"],
                                                                patience=plateau["patience"], min_lr=plateau["min_lr"])
-        sampler = PKSampler(train_set.labels, p=phase_cfg["p"], k=phase_cfg["k"], seed=cfg["seed"] + phase_cfg["phase"])
+        scfg = cfg.get("sampler", {})
+        is_reference = (train_set.df["source"].isin(["reference", "epillid_ref"]).to_numpy()
+                        if scfg.get("pair_domains") and "source" in train_set.df else None)
+        sampler = PKSampler(train_set.labels, p=phase_cfg["p"], k=phase_cfg["k"], seed=cfg["seed"] + phase_cfg["phase"],
+                            weighting=scfg.get("weighting", "uniform"), is_reference=is_reference)
         train_loader = DataLoader(train_set, batch_sampler=sampler, **loader_kw)
         epochs = min(phase_cfg["epochs"], args.epochs) if args.epochs else phase_cfg["epochs"]
         phase_best, wait = -1.0, 0
@@ -146,8 +187,12 @@ def main():
                     out = model(image)
                 emb = out["embedding"].float()
                 losses = {"metric": metric_loss(emb, label)}
+                if lcfg.get("triplet_weight") and isinstance(metric_module, ArcFace):
+                    # with domain-paired batches the hardest positive is mostly everyday vs studio reference
+                    losses["triplet"] = batch_hard_triplet(emb, label, lcfg["triplet_margin"])
                 losses.update(auxiliary_losses(out, batch["shape"].to(device), batch["colour"].to(device)))
-                total = (losses["metric"] + lcfg["lambda_shape"] * losses.get("shape", 0.0)
+                total = (losses["metric"] + lcfg.get("triplet_weight", 0.0) * losses.get("triplet", 0.0)
+                         + lcfg["lambda_shape"] * losses.get("shape", 0.0)
                          + lcfg["lambda_colour"] * losses.get("colour", 0.0))
                 optimizer.zero_grad(set_to_none=True)
                 total.backward()
@@ -159,6 +204,11 @@ def main():
             known = embed(model, known_loader, device)
             unknown = embed(model, unknown_loader, device)[0]
             metrics = evaluate(known[0], known[1], unknown, k_enrol=cfg["eval"]["k_enrol"], seed=cfg["seed"])
+            if ref_gallery:
+                ref_emb = embed(model, ref_gallery["loader"], device)[0]
+                q_emb = np.concatenate([known[0], unknown])[ref_gallery["mask"]]
+                metrics.update(reference_retrieval(q_emb, ref_gallery["q_cls"], ref_emb, ref_gallery["ref_cls"],
+                                                   ref_gallery["n"]))
             score = metrics[select]
             scheduler.step(score)
             row = dict(phase=phase_cfg["phase"], epoch=epoch, margin=getattr(metric_module, "margin", None),
@@ -170,12 +220,15 @@ def main():
             print(f"phase {phase_cfg['phase']} epoch {epoch:2d}: loss {row.get('loss_metric', 0):.3f} | top1 all "
                   f"{metrics['top1_all']:.3f} | gallery-10: top1 {metrics['top1_gallery10']:.3f}, unknown AUROC "
                   f"{metrics['auroc_gallery10']:.3f}, correct@95%-reject {metrics['known_correct_95_gallery10']:.3f} "
-                  f"| dims {metrics['embedding_dims']:.1f} | {train_time:.0f}+{row['eval_seconds']:.0f}s", flush=True)
+                  f"| dims {metrics['embedding_dims']:.1f}"
+                  + (f" | ref MAP {metrics['ref_map']:.3f} top1 {metrics['ref_top1']:.3f}" if "ref_map" in metrics else "")
+                  + f" | {train_time:.0f}+{row['eval_seconds']:.0f}s", flush=True)
             if score > best["score"]:
                 best = {"score": score, "phase": phase_cfg["phase"], "epoch": epoch, "metrics": metrics,
                         "state": copy.deepcopy(model.state_dict()), "metric_state": copy.deepcopy(metric_module.state_dict())}
-                torch.save({"model": best["state"], "config": cfg, "vocab": vocab.to_dict(), "metrics": metrics,
-                            "phase": best["phase"], "epoch": epoch}, run_dir / "best.pt")
+                torch.save({"model": best["state"], "metric_state": best["metric_state"], "config": cfg,
+                            "vocab": vocab.to_dict(), "metrics": metrics, "phase": best["phase"], "epoch": epoch},
+                           run_dir / "best.pt")
             if score > phase_best:
                 phase_best, wait = score, 0
             else:

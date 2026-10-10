@@ -84,6 +84,14 @@ class RxNormClient:
         ids = (self.get("rxcui.json", idtype="NDC", id=digits).get("idGroup") or {}).get("rxnormId") or []
         return ids[0] if ids else None
 
+    def ndc_status(self, ndc):
+        """{'status', 'rxcui', 'name'} for an NDC, including retired ones (ACTIVE, OBSOLETE, ...); None if unknown."""
+        digits = "".join(ch for ch in str(ndc) if ch.isdigit())
+        s = self.get("ndcstatus.json", ndc=digits).get("ndcStatus") or {}
+        if not s.get("rxcui"):
+            return None
+        return {"status": s.get("status"), "rxcui": s["rxcui"], "name": s.get("conceptName")}
+
     def approximate(self, term, max_candidates=5):
         """
         Fuzzy matches for free text such as 'lipitor 10mg' or a typo, best first, as [(rxcui, name or None)] with

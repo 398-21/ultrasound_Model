@@ -37,10 +37,17 @@ def batch_hard_triplet(embeddings, labels, margin=0.2):
 
 
 def auxiliary_losses(outputs, shape, colour):
-    """Shape: cross-entropy, ignoring unlabelled (-1). Colour: binary cross-entropy (two-tone pills have 2 colours)."""
+    """
+    Shape: cross-entropy, ignoring unlabelled (-1). Colour: binary cross-entropy (two-tone pills have 2 colours),
+    only on photos with a colour label (an all-zero target means unknown, e.g. ePillID references without C3PI
+    metadata, not "no colour").
+    """
     losses = {}
-    if "shape_logits" in outputs:
+    if "shape_logits" in outputs and (shape >= 0).any():
         losses["shape"] = F.cross_entropy(outputs["shape_logits"].float(), shape, ignore_index=-1)
     if "colour_logits" in outputs:
-        losses["colour"] = F.binary_cross_entropy_with_logits(outputs["colour_logits"].float(), colour)
+        known = colour.sum(dim=1) > 0
+        if known.any():
+            losses["colour"] = F.binary_cross_entropy_with_logits(outputs["colour_logits"].float()[known],
+                                                                  colour[known])
     return losses

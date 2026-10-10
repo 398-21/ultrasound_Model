@@ -10,7 +10,8 @@ for that patient.
 
 **Data comes first.** Without enough clean, leak-free data this project fails, so the data milestones come before
 any model work. Each data milestone has a gate and a fallback (see Data plan). The dataset details behind
-every number here are in [docs/datasets.md](docs/datasets.md).
+every number here are in [docs/datasets.md](docs/datasets.md). Features added after the original plan (pill →
+name, name → picture, one-call scan, continual learning) are in [docs/features.md](docs/features.md).
 
 Owners: **[Claude]** = Claude can do it from this repo; **[You]** = needs you (your machine, accounts,
 emails, physical pills, decisions); **[Both]** = Claude prepares it and you run or approve it.
@@ -317,9 +318,11 @@ Interactions predicted by a model should never trigger a patient alert.
 - [ ] **[You]** Have a pharmacist or your supervisor review the alert wording and severity mapping.
 
 ### P8: Imprint OCR (stretch)
-- [ ] **[Claude]** Imprint crops and labels from the C3PI metadata; TrOCR-small fine-tune script; tie-break
-      logic.
-- [ ] **[You]** Run the fine-tune on the desktop.
+- [x] **[Claude]** Off-the-shelf Florence-2 OCR (4 rotations) + imprint re-ranking with rarity weights, tuned on
+      validation (`src/epills/core/imprint/`, `scripts/evaluate_imprint.py`; 2026-10-10). Reads 43% of imprints;
+      ePillID MAP 0.60 → 0.78 with run 5.
+- [ ] **[Claude]** Optional: fine-tune an imprint reader on C3PI crops (imprint text labels), or Florence-2-large
+      (47%); use the re-ranking in `/v1/identify`.
 
 ### P9: Write-up
 - [ ] **[Both]** Results tables with CIs, ablations, the cross-domain gap, a failure gallery and limitations.
@@ -327,7 +330,8 @@ Interactions predicted by a model should never trigger a patient alert.
 ### P10: API and hosting (Hugging Face Spaces)
 - [x] **[Claude]** Hosted / not-hosted layout, FastAPI skeleton with `/health`, Dockerfile (2026-10-07).
 - [x] **[Claude]** Stage 3 endpoints: `/v1/safety/medications`, `/v1/safety/dose`, `/v1/safety/label` (2026-10-08).
-- [ ] **[Claude]** `/v1/embed` and `/v1/match` on the trained model.
+- [x] **[Claude]** `/v1/embed`, `/v1/match`, `/v1/scan`, `/v1/identify`, `/v1/pills/search` on run 3's model
+      (CPU), with the pill catalogue (features F1–F3, docs/features.md; 2026-10-09).
 - [ ] **[You]** Hugging Face account, a model repo for the weights, and the Space; then share the API with the
       app team.
 
@@ -365,6 +369,12 @@ Interactions predicted by a model should never trigger a patient alert.
 | 2026-10-08 | Train the new layers at the FER rates; ArcFace table at 1e-3; margin warm-up (run 2) | Run 1's 1e-3 for the new layers collapsed the embeddings; run 2 meets all validation targets |
 | 2026-10-08 | D7: run 3 adds the training groups' studio reference photos | Run 2 failed on studio references (ePillID MAP@1 12%) and other photo conditions (MEDISEG 40%) |
 | 2026-10-08 | Open-set metrics measured per patient-sized gallery of 10 | Against all 214 medicines an unknown pill nearly always has a look-alike; the app compares with one patient's list |
+| 2026-10-09 | New features F1–F3 (pill → name, name → picture, one-call scan) built on a catalogue of 4,800 US pills | Asked for the app; identification is worded as possible matches (top-1 about a third on unseen pills) |
+| 2026-10-09 | F4, merging detection into the recognition network: paused | To discuss with the Stage 1 teammate; recommended against (pills shrink to 50–100 px in a one-network design) |
+| 2026-10-09 | F5, continual learning: new medicines without retraining; periodic, gated, human-approved retraining; no autonomous online learning | Singapore's PDPA, HSA GL-04 Rev 4 change management and AIHGle 2.0 (docs/features.md) |
+| 2026-10-09 | Run 4: augmentation for other photo conditions + jittered crop windows | Run 3 still weak on other phones and conditions (MEDISEG 42%) |
+| 2026-10-10 | Imprint OCR re-ranking (Florence-2) as a reported variant; run 6 continues run 5 at a stronger learning rate | Runs 3–5 underfit; OCR re-ranking: ePillID MAP 0.60 → 0.78 and GAP@1 0.92 (paper 0.91) |
+| 2026-10-09 | Run 5: a separate benchmark model under ePillID's official protocol (all types' references, test types included; validation types' left out) | To compare like for like with the paper (MAP 95.76); the strict model stays the one for the app |
 
 ## 8. Risks
 | Risk | Mitigation |

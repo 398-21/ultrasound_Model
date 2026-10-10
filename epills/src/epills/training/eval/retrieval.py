@@ -64,6 +64,20 @@ def effective_dims(emb):
     return float(np.exp(-(var * np.log(var)).sum()))
 
 
+def reference_retrieval(query_emb, query_cls, ref_emb, ref_cls, n_classes):
+    """
+    The ePillID-style task on validation: each everyday photo against the reference photos of all pill types; a
+    class's score is its best reference. Returns MAP (mean 1/rank) and top-1 (ties count for the query).
+    """
+    q = torch.nn.functional.normalize(torch.as_tensor(query_emb, dtype=torch.float32), dim=1)
+    r = torch.nn.functional.normalize(torch.as_tensor(ref_emb, dtype=torch.float32), dim=1)
+    idx = torch.as_tensor(ref_cls, dtype=torch.long).expand(len(q), -1)
+    sims = torch.full((len(q), n_classes), -2.0).scatter_reduce(1, idx, q @ r.T, reduce="amax")
+    right = sims[torch.arange(len(q)), torch.as_tensor(query_cls, dtype=torch.long)]
+    rank = 1 + (sims > right[:, None]).sum(dim=1).float()
+    return {"ref_map": float((1 / rank).mean()), "ref_top1": float((rank == 1).float().mean())}
+
+
 def evaluate(known_emb, known_labels, unknown_emb, k_enrol=3, gallery_size=10, n_galleries=200, seed=0):
     enrol = enrol_split(known_labels, k_enrol, seed)
     gallery = {lab: known_emb[enrol & (known_labels == lab)] for lab in np.unique(known_labels)}

@@ -1,7 +1,9 @@
 """
 P6: evaluate a trained, calibrated Stage 2 model on the test sets. Nothing here is tuned on these sets: the model,
-the crop framing (a square window 1.4x the pill's long side, the C3PI cropper's rule), the threshold and the margin
-(calibration.json, from validation) are all fixed before the test sets are scored.
+the crop framing (the crop contract, epills.core.inference.preprocess: a square window WINDOW x the long side of a
+tight pill box, measured on training crops), the threshold and the margin (calibration.json, from validation) are
+all fixed before the test sets are scored. Until 2026-10-09 the window was 1.4 (the C3PI cropper's ratio, whose
+boxes include shadows); results with it are kept in <run>/eval_window1.4/.
 
 Test sets (--sets, default all three):
   c3pi_holdout  C3PI everyday photos of the ePillID holdout pill types (manifest split epillid_holdout), never used
@@ -35,15 +37,16 @@ from torch.utils.data import DataLoader, Dataset
 EPILLS_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(EPILLS_ROOT / "src"))
 from epills.core.inference.matching import normalise  # noqa: E402
+from epills.core.inference.preprocess import WINDOW  # noqa: E402
 from epills.core.models.hybrid import HybridPillNet  # noqa: E402
 from epills.training.datasets.c3pi_crop import square_crop  # noqa: E402
 from epills.training.datasets.pills import PillCrops, Vocab, eval_transform, load_manifest  # noqa: E402
 from epills.training.eval.openset import bootstrap, closed_set_top1, operating_point, simulate  # noqa: E402
 from epills.training.eval.retrieval import embed  # noqa: E402
 
-WINDOW = 1.4          # crop window / pill long side, as in the C3PI cropper (find_pill)
 CROP_SIZE = 384       # as the C3PI crops
 K_ENROL = 3
+WINDOW_USED = [WINDOW]  # set in main() from the calibration: the window the model was calibrated with
 GALLERIES = 1000
 EPILLID = EPILLS_ROOT / "data/raw/epillid/ePillID_data"
 MEDISEG = EPILLS_ROOT / "data/raw/mediseg"
@@ -56,8 +59,8 @@ class Crops(Dataset):
     cropped from the photo (edges replicated only outside it).
     """
 
-    def __init__(self, items):
-        self.items, self.transform = items, eval_transform()
+    def __init__(self, items, window=WINDOW):
+        self.items, self.window, self.transform = items, window, eval_transform()
 
     def __len__(self):
         return len(self.items)
@@ -70,20 +73,20 @@ class Crops(Dataset):
             ring = np.concatenate([img[:2].reshape(-1, 3), img[-2:].reshape(-1, 3), img[:, :2].reshape(-1, 3),
                                    img[:, -2:].reshape(-1, 3)])
             fill = tuple(float(v) for v in np.median(ring, axis=0))
-            side = WINDOW * max(h, w)
+            side = self.window * max(h, w)
             f = CROP_SIZE / side
             M = np.float32([[f, 0, CROP_SIZE / 2 - w / 2 * f], [0, f, CROP_SIZE / 2 - h / 2 * f]])
             crop = cv2.warpAffine(img, M, (CROP_SIZE, CROP_SIZE), flags=cv2.INTER_CUBIC,
                                   borderMode=cv2.BORDER_CONSTANT, borderValue=fill)
         else:
-            crop = square_crop(img, box, WINDOW * max(box[2] - box[0], box[3] - box[1]), CROP_SIZE)
+            crop = square_crop(img, box, self.window * max(box[2] - box[0], box[3] - box[1]), CROP_SIZE)
         return {"image": self.transform(Image.fromarray(crop[:, :, ::-1].copy())), "label": i}
 
 
 def embed_items(model, items, device, cache):
     if cache.exists():
         return np.load(cache)["emb"]
-    emb, _ = embed(model, DataLoader(Crops(items), batch_size=128, num_workers=8), device)
+    emb, _ = embed(model, DataLoader(Crops(items, WINDOW_USED[0]), batch_size=128, num_workers=8), device)
     np.savez(cache, emb=emb)
     return emb
 
@@ -155,7 +158,7 @@ def eval_epillid(model, device, out_dir):
     two_sided = (cls_sim[pairs[:, 0]] + cls_sim[pairs[:, 1]]) / 2
     result = {
         "protocol": "ePillID fold 4; gallery = reference photos of all 4,902 pill types; crops padded to the "
-                    "C3PI framing (window 1.4x the image)",
+                    f"crop contract (window {WINDOW_USED[0]}x the image)",
         "two_sided": {**epillid_metrics(two_sided, q_cls[pairs[:, 0]]),
                       "photos": int(len(np.unique(pairs))), "pill_types": int(len(np.unique(q_cls[pairs[:, 0]])))},
         "single_photo": epillid_metrics(cls_sim, q_cls),
@@ -194,7 +197,7 @@ def eval_mediseg(model, device, out_dir, cal):
     by_scene = {k: {"top1": float(g.correct.mean()), "queries": int(len(g))} for k, g in q.groupby("scene")}
 
     result = {
-        "protocol": "MEDISEG 32pills; crops from the box, window 1.4x the long side; enrolment: 3 single-pill "
+        "protocol": f"MEDISEG 32pills; crops from the box, window {WINDOW_USED[0]}x the long side; enrolment: 3 single-pill "
                     "photos per product; all other pills are queries",
         "pill_long_side_px_quantiles": dict(zip(["5%", "25%", "50%", "75%", "95%"],
                                                 np.quantile(items.long_px, [.05, .25, .5, .75, .95]).round(0).tolist())),
@@ -255,14 +258,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--run", type=Path, required=True)
     parser.add_argument("--sets", nargs="+", default=["c3pi_holdout", "epillid", "mediseg"])
+    parser.add_argument("--out-name", default="eval", help="results folder inside the run folder")
     args = parser.parse_args()
     run = args.run if args.run.is_absolute() else EPILLS_ROOT / args.run
     cal = json.loads((run / "calibration.json").read_text())
-    out_dir = run / "eval"
+    WINDOW_USED[0] = cal.get("window") or WINDOW
+    out_dir = run / args.out_name
     out_dir.mkdir(exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, _ = HybridPillNet.from_checkpoint(run / "best.pt", device)
-    print(f"model {run / 'best.pt'} | threshold {cal['threshold']:.4f} | margin {cal['margin']:.3f}", flush=True)
+    print(f"model {run / 'best.pt'} | threshold {cal['threshold']:.4f} | margin {cal['margin']:.3f} | "
+          f"window {WINDOW_USED[0]}", flush=True)
 
     for name in args.sets:
         if name == "c3pi_holdout":

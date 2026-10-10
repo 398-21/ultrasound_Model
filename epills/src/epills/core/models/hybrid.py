@@ -152,7 +152,8 @@ class HybridPillNet(nn.Module):
     """
 
     def __init__(self, embedding_dim=256, num_shapes=0, num_colours=0, num_measured=0, refine_pool="mean",
-                 pretrained=True, vit_checkpoint=VIT_CHECKPOINT):
+                 pretrained=True, vit_checkpoint=VIT_CHECKPOINT, vit_config=None):
+        """vit_config: the ViT's config as a dict (serving: no download needed); default: fetched by name."""
         super().__init__()
         from torchvision.models import VGG16_Weights, vgg16
         from transformers import ViTConfig, ViTModel
@@ -160,8 +161,11 @@ class HybridPillNet(nn.Module):
         self.vgg = vgg16(weights=VGG16_Weights.IMAGENET1K_V1 if pretrained else None).features  # (B, 512, 7, 7)
         self.cbam = CBAM(512)
         self.vgg_dense = keras_dense(512, 256)
-        self.vit = (ViTModel.from_pretrained(vit_checkpoint) if pretrained
-                    else ViTModel(ViTConfig.from_pretrained(vit_checkpoint)))
+        if pretrained:
+            self.vit = ViTModel.from_pretrained(vit_checkpoint)
+        else:
+            config = ViTConfig(**vit_config) if vit_config else ViTConfig.from_pretrained(vit_checkpoint)
+            self.vit = ViTModel(config, add_pooling_layer=True)
         vit_dim = self.vit.config.hidden_size
         self.fusion = CapsuleFusionBlock([256, vit_dim], capsule_dim=256, num_iterations=2, dropout_rate=0.4)
         self.refine = TransformerRefinementBlock(in_dim=256, pool=refine_pool)
@@ -199,8 +203,15 @@ class HybridPillNet(nn.Module):
 
     @classmethod
     def from_checkpoint(cls, path, device="cpu"):
-        """A trained model from a best.pt written by scripts/train_stage2.py, in eval mode. Returns (model, ckpt)."""
+        """
+        A trained model in eval mode, from a training best.pt (scripts/train_stage2.py) or a serving export
+        (scripts/export_model.py: half-precision weights, the ViT config, calibration). Returns (model, ckpt).
+        """
         ckpt = torch.load(path, map_location="cpu", weights_only=False)
+        if ckpt.get("format", "").startswith("epills-stage2"):
+            model = cls(**ckpt["model_args"], pretrained=False, vit_config=ckpt["vit_config"])
+            model.load_state_dict({k: v.float() for k, v in ckpt["state_dict"].items()})
+            return model.to(device).eval(), ckpt
         mcfg, vocab = ckpt["config"]["model"], ckpt["vocab"]
         model = cls(embedding_dim=mcfg["embedding_dim"], refine_pool=mcfg["refine_pool"],
                     num_shapes=len(vocab["shapes"]) if mcfg["aux_heads"] else 0,

@@ -1,0 +1,66 @@
+# Stage 2 run 7: benchmark-aligned training (ePillID official protocol, benchmark model only). Continues run 6 with
+#   - the epoch picked on a validation version of the benchmark: validation everyday photos against the references
+#     of all 4,902 ePillID types (MAP; validation types' references are never trained on), not everyday-only top-1;
+#   - batches that pair each pill's everyday photos with its studio references (2 + 2), and a batch-hard triplet term
+#     next to ArcFace, whose hardest positives are then mostly everyday vs reference.
+# Same data and architecture as runs 5-6. See PROGRESS_LOG 2026-10-10.
+# Run from the epills folder:  .venv\Scripts\python scripts\train_stage2.py --config configs\stage2_run7_official.yaml
+name: stage2_run7_official
+init_from: outputs/runs/stage2_run6_official/best.pt
+seed: 2026
+
+data:
+  manifest: data/processed/c3pi_splits/manifest_epillid_official.csv   # + all ePillID references
+  images: data/interim/c3pi/crops/images
+  workers: 12
+
+model:
+  embedding_dim: 256
+  refine_pool: mean        # mean = the FER block; concat = 4 tokens x 64 without pooling (ablation)
+  aux_heads: true          # shape and colour heads (the plan's lambda_1, lambda_2)
+
+loss:
+  metric: arcface          # arcface or triplet (E4)
+  arcface_margin: 0.3
+  arcface_margin_warmup_epochs: 0   # already trained: full margin from the start
+  arcface_scale: 32
+  triplet_margin: 0.2
+  triplet_weight: 0.5        # batch-hard triplet next to ArcFace (domain-paired batches)
+  lambda_shape: 0.2
+  lambda_colour: 0.2
+
+augment:
+  colour_jitter: 0.05      # saturation 0.05, hue 0.0125: colour identifies pills, so hue stays nearly fixed
+  crop_jitter:             # a detector's box error: window size x0.75-1.35 (tight to loose) and its centre shifted
+    scale: [0.75, 1.35]    # by up to 10% of its side; the pill then fills ~50-95% of the frame
+    shift: 0.1             # (runs 1-3: a random 75-100% of the crop's area)
+  photo:                   # other phones and light (MEDISEG: other cameras, small pills)
+    brightness: 0.3
+    contrast: 0.3
+    white_balance: 0.08    # red and blue gains within +-8%
+    downscale_p: 0.3       # shrink to 40-160 px and back: small, low-resolution pills
+    downscale_px: [40, 160]
+    jpeg_p: 0.3
+    jpeg_quality: [30, 90]
+    noise_p: 0.2
+    noise_std: 0.03
+  neighbour_p: 0.2         # another pill pasted partly into the frame
+
+sampler:
+  weighting: sqrt          # 3,500 reference-only classes of 2 photos: draw classes by sqrt(photos), not uniformly
+  pair_domains: true       # a pill with both kinds of photo gives 2 references + 2 everyday photos
+
+# The FER schedule: phase 1 with the ViT and VGG16 blocks 1-3 frozen, phase 2 with everything trainable.
+# lr: pretrained backbones (VGG16, ViT); head_lr: the new parts (CBAM, fusion, refinement, heads), at the FER rate;
+# metric_lr: the ArcFace class table (1,710 x 256, starts random, barely moves at the FER rate).
+phases:
+  - {phase: 2, epochs: 25, p: 16, k: 4, lr: 3.0e-5, head_lr: 3.0e-5, metric_lr: 3.0e-4}
+weight_decay: 1.0e-3
+plateau: {factor: 0.5, patience: 4, min_lr: 1.0e-6}   # ReduceLROnPlateau, as in FER
+early_stopping_patience: 6                           # per phase; the best epoch's weights are restored
+select_metric: ref_map                               # validation benchmark: everyday photos vs all references
+
+eval:
+  k_enrol: 3        # enrolment photos per medication (the plan: 3-5)
+  batch: 128
+  reference_gallery: true   # adds ref_map / ref_top1 every epoch
