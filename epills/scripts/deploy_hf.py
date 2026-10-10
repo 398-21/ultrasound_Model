@@ -3,13 +3,15 @@ Deploy the PharmaScan API to Hugging Face (docs/DEPLOY.md has the step-by-step g
 
 Two repos on your Hugging Face account:
   <user>/pharmascan-assets   private model repo: stage2_model.pt, catalogue.tar, safety.sqlite (never in git)
-  <user>/pharmascan-api      Docker Space: only the hosted code (serving/ + src/epills/core) and its Dockerfile
+  <user>/pharmascan-api      public Space: only the hosted code (serving/ + src/epills/core). By default a Gradio
+                             Space on ZeroGPU hardware (free for personal accounts older than 30 days; app.py =
+                             serving/space_app.py, the same REST API); --docker: a Docker Space (needs HF PRO)
 
 Commands (from the epills folder, logged in with `hf auth login` or HF_TOKEN set; the token is never printed):
   python scripts/deploy_hf.py assets --user <you>     upload the served model, catalogue and safety database,
                                                       and tag the version (for rollback)
   python scripts/deploy_hf.py space --user <you>      upload the code and set the Space's settings; the Space then
-                                                      builds itself (5-10 min) and starts
+                                                      builds itself (5-10 min) and starts  [--docker]
   python scripts/deploy_hf.py feedback --user <you>   create the private dataset repo for opt-in photos (F5) and
                                                       turn collection on in the Space
   python scripts/deploy_hf.py restart --user <you>    restart the Space (loads newly uploaded assets)
@@ -26,13 +28,13 @@ EPILLS_ROOT = Path(__file__).resolve().parents[1]
 MODEL = EPILLS_ROOT / "outputs/serving/stage2_model.pt"
 CATALOGUE = EPILLS_ROOT / "data/processed/catalogue"
 SAFETY = EPILLS_ROOT / "data/processed/safety/safety.sqlite"
+GRADIO_VERSION = "6.30.0"  # the Space installs it; serving/space_app.py was tested with it
 SPACE_README = """---
 title: PharmaScan API
 emoji: 💊
 colorFrom: blue
 colorTo: green
-sdk: docker
-app_port: 7860
+{sdk}
 pinned: false
 short_description: Pill verification and medication safety checks (prototype)
 ---
@@ -73,21 +75,32 @@ def deploy_assets(user):
           f"Space to pin this version, or leave it unset to always use the latest")
 
 
-def deploy_space(user):
+def deploy_space(user, docker=False):
     h, repo = api(), f"{user}/pharmascan-api"
-    h.create_repo(repo, repo_type="space", space_sdk="docker", private=False, exist_ok=True)
+    hardware = "cpu-basic" if docker else "zero-a10g"
+    h.create_repo(repo, repo_type="space", space_sdk="docker" if docker else "gradio", space_hardware=hardware,
+                  private=False, exist_ok=True)
+    h.update_repo_settings(repo, repo_type="space", private=False)  # the web app calls it without a token
     with tempfile.TemporaryDirectory() as tmp:
         stage = Path(tmp)
-        shutil.copy(EPILLS_ROOT / "serving/Dockerfile", stage / "Dockerfile")
-        (stage / "README.md").write_text(SPACE_README, encoding="utf-8")
+        if docker:
+            shutil.copy(EPILLS_ROOT / "serving/Dockerfile", stage / "Dockerfile")
+            sdk = "sdk: docker\napp_port: 7860"
+        else:
+            shutil.copy(EPILLS_ROOT / "serving/space_app.py", stage / "app.py")
+            shutil.copy(EPILLS_ROOT / "serving/requirements-space.txt", stage / "requirements.txt")
+            sdk = f"sdk: gradio\nsdk_version: {GRADIO_VERSION}\npython_version: '3.12'\napp_file: app.py"
+        (stage / "README.md").write_text(SPACE_README.format(sdk=sdk), encoding="utf-8")
         shutil.copytree(EPILLS_ROOT / "serving", stage / "serving",
-                        ignore=shutil.ignore_patterns("__pycache__", "Dockerfile", "README.md"))
+                        ignore=shutil.ignore_patterns("__pycache__", "Dockerfile", "README.md", "space_app.py",
+                                                      "requirements*.txt"))
         (stage / "src/epills").mkdir(parents=True)
         shutil.copy(EPILLS_ROOT / "src/epills/__init__.py", stage / "src/epills/__init__.py")
         shutil.copytree(EPILLS_ROOT / "src/epills/core", stage / "src/epills/core",
                         ignore=shutil.ignore_patterns("__pycache__"))
         h.upload_folder(folder_path=str(stage), repo_id=repo, repo_type="space", commit_message="deploy API",
-                        delete_patterns=["serving/**", "src/**"])
+                        delete_patterns=["serving/**", "src/**", "Dockerfile", "app.py", "requirements.txt"])
+    h.request_space_hardware(repo, hardware)
     h.add_space_variable(repo, "EPILLS_MODEL_REPO", f"{user}/pharmascan-assets")
     token = os.environ.get("HF_TOKEN")
     if token:
@@ -112,6 +125,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=["assets", "space", "feedback", "restart"])
     parser.add_argument("--user", required=True, help="your Hugging Face user (or organisation) name")
+    parser.add_argument("--docker", action="store_true", help="space: a Docker Space instead (needs HF PRO)")
     args = parser.parse_args()
     if args.command == "assets":
         for p in (MODEL, CATALOGUE / "catalogue.sqlite", SAFETY):
@@ -119,7 +133,7 @@ def main():
                 sys.exit(f"missing {p}: run export_model.py / build_catalogue.py / build_safety_db.py first")
         deploy_assets(args.user)
     elif args.command == "space":
-        deploy_space(args.user)
+        deploy_space(args.user, args.docker)
     elif args.command == "feedback":
         deploy_feedback(args.user)
     else:

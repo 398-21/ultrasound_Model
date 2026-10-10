@@ -25,16 +25,18 @@ class Embedder:
         self.transform = eval_transform()
         self.batch_size = batch_size
 
-    @torch.no_grad()
     def __call__(self, crops):
         """PIL crops (already framed by the crop contract) -> (n, d) float32 unit vectors."""
-        out = []
-        for i in range(0, len(crops), self.batch_size):
-            x = torch.stack([self.transform(c.convert("RGB")) for c in crops[i:i + self.batch_size]]).to(self.device)
-            with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
-                emb = self.model(x)["embedding"]
-            out.append(emb.float().cpu().numpy())
+        out = [self.forward(torch.stack([self.transform(c.convert("RGB")) for c in crops[i:i + self.batch_size]]))
+               for i in range(0, len(crops), self.batch_size)]
         return np.concatenate(out) if out else np.zeros((0, 256), np.float32)
+
+    @torch.no_grad()
+    def forward(self, x):
+        """A batch of transformed crops (CPU tensor) -> (n, d) float32 array. The Space app swaps in a ZeroGPU one."""
+        with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
+            emb = self.model(x.to(self.device))["embedding"]
+        return emb.float().cpu().numpy()
 
     def embed_photo(self, image, boxes=None):
         """A photo and optional boxes (x0, y0, x1, y1) -> embeddings; without boxes the photo is one framed crop."""

@@ -33,6 +33,7 @@ from typing import Literal
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pydantic import BaseModel, Field, ValidationError
@@ -304,12 +305,14 @@ def health():
     except HTTPException as error:
         safety = {"loaded": False, "error": error.detail}
     emb, cat = app.state.embedder, app.state.catalogue
+    # where photos run: the Space's GpuOrCpu forward knows (zerogpu, or cpu after a refusal), else the model's device
+    device = getattr(getattr(emb, "forward", None), "device", None) or getattr(emb, "device", None)
     return {
         "status": "ok",
         "api_version": API_VERSION,
         "model_repo": os.environ.get("EPILLS_MODEL_REPO", "not set"),
         "model": {"loaded": emb is not None, "version": getattr(emb, "version", None),
-                  "error": _errors.get("embedder")},
+                  "device": str(device) if device else None, "error": _errors.get("embedder")},
         "catalogue": {"loaded": cat is not None, "products": len(cat) if cat else None,
                       "model_version": getattr(cat, "model_version", None), "error": _errors.get("catalogue")},
         "safety_db": safety,
@@ -329,7 +332,7 @@ async def embed(image: UploadFile = File(description="A pill crop, or a photo wi
     emb = asset("embedder")
     photo = await read_image(image)
     b = parse_box(box)
-    vector = emb.embed_photo(photo, [b] if b else None)[0]
+    vector = (await run_in_threadpool(emb.embed_photo, photo, [b] if b else None))[0]
     return {"embedding": [round(float(v), 6) for v in vector], "dim": int(vector.shape[0]),
             "model_version": emb.version, "framed_by": "box" if b else "as sent"}
 
@@ -366,7 +369,8 @@ async def identify(images: list[UploadFile] = File(description="One pill: 1 phot
     emb = asset("embedder")
     photos = [await read_image(i) for i in images]
     box_list = parse_boxes(boxes, len(photos))
-    vectors = np.concatenate([emb.embed_photo(p, [box_list[i]] if box_list else None) for i, p in enumerate(photos)])
+    vectors = np.concatenate([await run_in_threadpool(emb.embed_photo, p, [box_list[i]] if box_list else None)
+                              for i, p in enumerate(photos)])
     return {**identify_pill(vectors, imprint, shape, colour, top_k), "model_version": emb.version}
 
 
@@ -398,7 +402,7 @@ async def scan(image: UploadFile = File(description="A full photo of the pills")
         result["message"] = ("No pill found. Spread the pills apart on a plain background and photograph them "
                              "again.")
         return result
-    vectors = emb.embed_photo(photo, box_list)
+    vectors = await run_in_threadpool(emb.embed_photo, photo, box_list)  # a GPU queue wait mustn't block the API
 
     if gallery:
         try:

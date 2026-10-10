@@ -8,13 +8,20 @@ Step by step, on the desktop (Windows, PowerShell, in the `epills` folder). Comm
 
 | Where | What | Visibility |
 |---|---|---|
-| Space `<you>/pharmascan-api` | only the hosted code: `serving/`, `src/epills/core/`, the Dockerfile | public code (the API's address is public; optional API key) |
+| Space `<you>/pharmascan-api` | only the hosted code: `app.py` (= `serving/space_app.py`), `serving/`, `src/epills/core/` | public code (the API's address is public; optional API key) |
 | Model repo `<you>/pharmascan-assets` | `stage2_model.pt` (204 MB), `catalogue.tar` (~200 MB), `safety.sqlite` (18 MB) | **private**; each upload tagged with the model version |
 | Dataset repo `<you>/pharmascan-feedback` | opt-in pill photos for retraining (only if switched on) | **private** |
 | Your desktop | everything else: data, training, the monthly retraining | not hosted |
 
-Free tier: "CPU basic" Space (2 vCPU, 16 GB RAM). It sleeps after about 48 hours without requests; the first call
-afterwards takes about a minute. One pill takes about a second on its CPU.
+Hardware: **ZeroGPU**, free with no card for a personal account with a verified email that is over 30 days old (up to
+2 such Spaces; [HF docs](https://huggingface.co/docs/hub/spaces-zerogpu)). Hugging Face only offers it to Gradio
+Spaces, so the Space runs `serving/space_app.py`: our REST API unchanged, plus a demo page at `/ui`. Each photo's
+model pass borrows a GPU from a daily allowance; when none is granted (allowance used up, queue too long), the
+Space's CPU answers instead for the next 10 minutes, and `/health` → `model.device` says which. The Space sleeps
+after about 48 hours without requests; the first call afterwards waits while it starts again.
+
+Plain-CPU Gradio and Docker Spaces now need a paid HF PRO subscription. `deploy_hf.py space --docker` still builds the
+Docker version (`serving/Dockerfile`) for that case.
 
 ## 1. Choose and prepare the model (once per model)
 
@@ -30,6 +37,10 @@ The catalogue must be rebuilt for every new model (the API refuses a mismatched 
 1. Sign up at https://huggingface.co (free). Your user name is `<you>` below.
 2. Settings → Access Tokens → **Create new token**, type **Write**, name it `pharmascan`. Copy it (starts with
    `hf_`). Keep it secret: never put it in git or in a message.
+3. A second token for the Space itself, which only needs to read: **Create new token** → **Fine-grained** → under
+   *Repositories* choose `<you>/pharmascan-assets` and tick **Read access to contents**; name it
+   `pharmascan-space`. After section 3 below, put it in Space → Settings → Variables and secrets → `HF_TOKEN`
+   (replacing the write token the script stored), then restart the Space.
 
 ## 3. Upload the assets and create the Space
 
@@ -47,6 +58,7 @@ When it says "Running":
 - `https://<you>-pharmascan-api.hf.space/health`: `model`, `catalogue` and `safety_db` should say `loaded: true`
   (about a minute after start).
 - `https://<you>-pharmascan-api.hf.space/docs`: the clickable API page. Try `GET /v1/pills/search` with `metformin`.
+- `https://<you>-pharmascan-api.hf.space/ui`: the demo page (identify one pill, or scan a photo of several).
 
 Give your teammate this address and [docs/API.md](API.md).
 

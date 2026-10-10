@@ -18,11 +18,13 @@ hosted: data, crops, training code, scripts and notebooks stay on the developmen
 
 ## Where it runs (free)
 
-**Hugging Face Spaces, Docker SDK, free CPU tier** (2 vCPU, 16 GB RAM).
-- The Space is built from this repository's `serving/Dockerfile` (paths relative to the `epills` folder).
+**Hugging Face Spaces, Gradio SDK on ZeroGPU** (free for personal accounts; plain-CPU and Docker Spaces now need PRO).
+- The Space runs `space_app.py` (uploaded as its `app.py`): this API unchanged, a demo page at `/ui`, and each model
+  pass on a GPU lent per call, or on the CPU when none is granted. `requirements-space.txt` pins a torch that
+  ZeroGPU supports. With PRO, `serving/Dockerfile` builds the plain Docker version instead.
 - Weights live in a separate Hugging Face **model** repo and are downloaded when the server starts
   (`EPILLS_MODEL_REPO`). They are never committed to git or baked into the image.
-- A free Space sleeps after about 48 hours without requests; the first request then takes about a minute.
+- A free Space sleeps after about 48 hours without requests; the first request then waits for it to start.
   Fine for the demo; send a request before presenting.
 - Optional: an API key in the Space's secrets, checked on every request, so only our app can call it.
 

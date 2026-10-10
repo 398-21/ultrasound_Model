@@ -30,12 +30,13 @@ training.
 | P7 Stage 3 safety engine | DDInter + RxNorm rules, dose checks, openFDA | 🟡 built and tested 2026-10-08 | Pharmacist or supervisor review of the wording | You |
 | P8 Imprint OCR | TrOCR tie-breaker (stretch goal) | ⬜ optional | — | — |
 | P9 Write-up | Report, tables, figures | ⬜ last | — | You; Claude drafts |
-| P10 API and hosting | FastAPI on Hugging Face Spaces (free) | 🟡 all endpoints work locally on CPU (2026-10-09): Stage 3, `/v1/embed`, `/v1/match`, `/v1/scan`, `/v1/identify`, `/v1/pills/*` | Hugging Face account, model repo and Space (you); then upload and deploy (Claude) | You; Claude |
+| P10 API and hosting | FastAPI on Hugging Face Spaces (free) | ✅ live 2026-10-10 with run 4: https://davidpansx-pharmascan-api.hf.space (free ZeroGPU Space; `/docs`, demo `/ui`) | Replace the Space's token with a read-only one; share the URL and docs/API.md with the web teammate | You |
 
 **Up next, in order:**
 1. Choose the model to serve: run 3 (best in C3PI conditions) or run 4 (better on other phones, safer there).
    Next modelling step: make the threshold transfer to new phones (it now rejects most own pills there).
-2. Deploy the API to Hugging Face (needs your account and a model repo): model, catalogue, safety database.
+2. ✅ API deployed (2026-10-10). Replace the Space's `HF_TOKEN` with a read-only token, and revoke the write token
+   that was pasted in chat (docs/DEPLOY.md §2).
 3. F4 (merging detection into the model): your talk with the Stage 1 teammate; also agree the box format.
 4. Own pill photos (G5): skipped for now; still the deciding test when photos exist.
 
@@ -74,7 +75,7 @@ harsher versions against all 214 validation medicines (`auroc_unknown`, `known_c
 | D5 cross-domain set | ✅ MEDISEG (2026-10-07); VAIPE copies (Roboflow, Kaggle) only as Stage 1 extra training data |
 | D6 DDInter "Unknown" severity | ✅ on screen only (2026-10-08): its own level `ungraded`, grey, not spoken |
 | D7 C3PI studio reference photos in training | ✅ yes, as run 3 (2026-10-08): 6,198 crops of training groups only. ePillID MAP@1 12% → 37%; kept |
-| D8 hosting | ✅ Hugging Face Spaces, free CPU; crops sent to the API are accepted for the non-commercial prototype (2026-10-07) |
+| D8 hosting | ✅ Hugging Face Spaces; crops sent to the API are accepted for the non-commercial prototype (2026-10-07). Free CPU Spaces now need PRO, so a free ZeroGPU Gradio Space serves the same API (2026-10-10) |
 
 ## Who does what
 
@@ -95,6 +96,28 @@ Everything runs on the desktop (RTX 4080 SUPER, Windows). The ePills Python envi
 
 Note on older entries: before 2026-10-07 (night) the cropper lived in `src/epills/datasets/`; it is now
 `src/epills/training/datasets/`. Their "Next" lists are history; the current plan is the table above.
+
+---
+
+## 2026-10-10 (evening): API live on Hugging Face, free (ZeroGPU Space)
+
+- **Live:** https://davidpansx-pharmascan-api.hf.space serves run 4 (`stage2_run4@2026-10-09`), the 4,936-pill
+  catalogue and the safety database from the private `DavidPanSX/pharmascan-assets`. `/docs` is the API page, `/ui`
+  a demo page (identify one pill; scan a photo).
+- **Why ZeroGPU:** Hugging Face refused the Docker Space (402: Docker and Gradio Spaces on free CPU now need PRO).
+  ZeroGPU hardware is free for personal accounts over 30 days old with a verified email, but only for Gradio Spaces.
+  So **serving/space_app.py** wraps the unchanged REST API: Gradio demo mounted at `/ui`, model weights handed to
+  ZeroGPU at start-up, each model pass on a lent GPU (`@spaces.GPU`), and the CPU when the GPU is refused (allowance
+  used up), for 10 minutes (`serving/app/fallback.py`, tested). `/health` → `model.device` says which ran.
+- **Checked on the Space:** 20 of 20 `/v1/embed` calls on the GPU, ~1.0–1.25 s each from the desktop (first 2.8 s);
+  `/v1/scan` 1.9 s; search, pictures, `/ui` work. Its embedding of a test crop matches the local CPU one (cosine
+  0.99994). Not yet seen on the Space: the CPU fallback (only happens when the allowance runs out) and its speed.
+- **Fixes on the way:** Gradio's SSR Node server took port 7860 (`ssr_mode=False`); the token secret only reached
+  the app on the second start. The API now runs model passes in a worker thread so a GPU wait doesn't block other
+  requests.
+- `scripts/deploy_hf.py space` builds the ZeroGPU Space by default (`--docker` for the PRO route);
+  `serving/requirements-space.txt` pins torch 2.11.0 (ZeroGPU supports 2.8–2.13). docs/DEPLOY.md, docs/API.md
+  (real base URL) and serving/README.md updated. 53 tests pass.
 
 ---
 

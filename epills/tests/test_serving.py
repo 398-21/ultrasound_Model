@@ -218,3 +218,26 @@ def test_catalogue_archive_is_unpacked_once(tmp_path):
         tar.add(src / "catalogue.sqlite", arcname="catalogue.sqlite")
     folder = _unpacked(tmp_path / "catalogue.tar")
     assert (folder / "catalogue.sqlite").read_text() == "x" and _unpacked(tmp_path / "catalogue.tar") == folder
+
+
+def test_space_uses_the_gpu_and_falls_back_to_the_cpu():
+    from serving.app.fallback import GpuOrCpu
+
+    now, refuse, calls = [0.0], [False], []
+
+    def gpu(x):
+        calls.append("gpu")
+        if refuse[0]:
+            raise RuntimeError("You have exceeded your free ZeroGPU quota")
+        return x * 2
+
+    forward = GpuOrCpu(gpu, lambda x: calls.append("cpu") or x * 2, cooldown=600, clock=lambda: now[0])
+    assert forward(1) == 2 and forward.device == "zerogpu"
+    refuse[0] = True
+    assert forward(1) == 2 and forward.device.startswith("cpu")      # refused: the CPU answers the same call
+    refuse[0] = False
+    now[0] = 599
+    assert forward(1) == 2 and calls[-1] == "cpu"                       # cooling down: GPU not asked
+    now[0] = 600
+    assert forward(1) == 2 and calls[-1] == "gpu" and forward.device == "zerogpu"
+    assert calls == ["gpu", "gpu", "cpu", "cpu", "gpu"]

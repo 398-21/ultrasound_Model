@@ -3,8 +3,8 @@
 Everything the web page can call, with examples. The live, clickable version of this list is the API's own page:
 **`<BASE_URL>/docs`** (try any request there).
 
-- **Base URL:** `https://<hf-user>-pharmascan-api.hf.space` once deployed (ask Sheng for the exact address).
-  Locally: `http://localhost:7860`.
+- **Base URL:** `https://davidpansx-pharmascan-api.hf.space` (locally: `http://localhost:7860`). A demo page for
+  trying photos by hand: `<BASE_URL>/ui`.
 - **Browser calls are allowed** (CORS is open; it can be limited to our site's address later).
 - **API key:** none for now. If one is switched on, send it in a header on every `/v1` request:
   `X-API-Key: <key>`.
@@ -15,8 +15,8 @@ Everything the web page can call, with examples. The live, clickable version of 
   app keeps the photos.
 - **Wording.** Show `message` texts as they are: they never say "take" or "stop", and alerts end with "Check with
   your pharmacist."
-- **First call after a quiet period** can take about a minute (the free server sleeps); call `/health` when the page
-  opens.
+- **First call after a quiet period** can take a few minutes (the free server sleeps after about two days without
+  calls, then reloads the model); call `/health` when the page opens.
 
 ## The main flows
 
@@ -36,10 +36,13 @@ Everything the web page can call, with examples. The live, clickable version of 
 ### `GET /health`
 ```json
 {"status": "ok", "api_version": "0.4.0",
- "model": {"loaded": true, "version": "stage2_run4@2026-10-09", "error": null},
+ "model": {"loaded": true, "version": "stage2_run4@2026-10-09", "device": "zerogpu", "error": null},
  "catalogue": {"loaded": true, "products": 4936, "model_version": "stage2_run4@2026-10-09", "error": null},
  "safety_db": {"loaded": true, "built_at": "2026-10-08T17:20:09", "pairs": "234981"}}
 ```
+`model.device` says where photos run now: `zerogpu` (a GPU Hugging Face lends per call, free within a daily
+allowance) or `cpu` (slower; used when no GPU was granted). Same model either way: the embeddings differ only by
+rounding. Measured from our desktop: about 1 s per photo (3 s for the first after a pause), 2 s per scan.
 
 ## Pill verification and identification (Stage 2)
 
@@ -211,7 +214,7 @@ When the user withdraws consent: deletes all their shared photos.
 ## Example in the browser (JavaScript)
 
 ```js
-const BASE = "https://<hf-user>-pharmascan-api.hf.space";
+const BASE = "https://davidpansx-pharmascan-api.hf.space";
 
 // enrolment: one photo -> embedding
 async function embed(file) {
@@ -241,6 +244,6 @@ const firstPicture = BASE + res.products[0].images[0].url;   // use as <img src>
 
 With `curl`:
 ```
-curl -F image=@pill.jpg https://<hf-user>-pharmascan-api.hf.space/v1/embed
-curl "https://<hf-user>-pharmascan-api.hf.space/v1/pills/search?name=metformin"
+curl -F image=@pill.jpg https://davidpansx-pharmascan-api.hf.space/v1/embed
+curl "https://davidpansx-pharmascan-api.hf.space/v1/pills/search?name=metformin"
 ```

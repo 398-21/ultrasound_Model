@@ -1,0 +1,12 @@
+# What the Hugging Face Space (Gradio SDK on ZeroGPU) installs; scripts/deploy_hf.py uploads it as requirements.txt.
+# Gradio (with FastAPI and uvicorn) comes with the Space at the README's sdk_version. torch must be a version ZeroGPU
+# supports (https://huggingface.co/docs/hub/spaces-zerogpu): 2.8.0 to 2.13.0.
+spaces
+torch==2.11.0
+torchvision==0.26.0
+transformers==5.19.0      # ViT-B/16, built from the config stored in the model file
+numpy>=2.1
+pillow>=11
+huggingface_hub>=0.24     # downloads the model, catalogue and safety.sqlite from the private assets repo
+python-multipart>=0.0.9   # image uploads
+opencv-python-headless>=4.10   # the stand-in pill finder (/v1/scan)
