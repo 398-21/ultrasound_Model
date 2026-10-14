@@ -16,6 +16,19 @@ from collections import Counter
 
 import numpy as np
 
+# the gallery imprint check (inference.matching.check_imprint): least token rarity that counts as a read, chosen on
+# validation by scripts/evaluate_imprint_gallery.py (most pills named correctly, wrong rates +0.1 point at most).
+# Run 4, galleries of 10, re-chosen 2026-10-13 with the served GPU reader (Florence-2-large, preset large_c92; the
+# same 0.5 as with Florence-2-base) and GALLERY_CONFIRM_DISTINCT: validation 78.3% -> 81.5% named correctly; test
+# 76.0% -> 78.3%, named wrongly 0.04% -> 0.06%, other pills accepted 3.8% -> 3.5%
+# (outputs/runs/stage2_run4/eval/imprint_gallery_large_c92_distinct.json)
+GALLERY_MIN_WEIGHT = 0.5
+# a match is confirmed or contradicted only by tokens that tell the patient's medications apart (check_imprint's
+# distinct_hits, blueprint B27): 'TV' read on a pill no longer confirms the patient's 'TV;7295' next to their 'TV;58'.
+# Validation against the plain rule: named wrongly 35 -> 30, other pills accepted 6,158 -> 6,150, named correctly
+# 81.49% -> 81.46%; in same-maker pairs no wrong name is 'confirmed' any more (36% were).
+GALLERY_CONFIRM_DISTINCT = True
+
 
 def compact(text):
     return re.sub(r"[^A-Z0-9]", "", str(text or "").upper())
@@ -61,3 +74,34 @@ def rerank(class_sims, reads, index, alpha, top_k=20):
         top = np.argpartition(-out[q], min(top_k, out.shape[1] - 1))[:top_k]
         out[q, top] += alpha * index.scores(reads[q], top)
     return out
+
+
+def distinct_tokens(imprints):
+    """
+    {key: recorded imprint} -> {key: its tokens that no other key's imprint contains}. 'TV;58' next to 'TV;7295' keeps
+    {'58'}: reading 'TV' says nothing about which of the two it is. A token inside another's ('72' vs '7295') is dropped
+    too, since reading the longer one also finds it.
+    """
+    tokens = {key: imprint_tokens(imprint) for key, imprint in imprints.items()}
+    return {key: {t for t in own if not any(t in u for other, theirs in tokens.items() if other != key for u in theirs)}
+            for key, own in tokens.items()}
+
+
+def read_hits(reads, imprints, weight=None, min_weight=0.0, distinct=False):
+    """
+    Which recorded imprints were read on one pill. reads: its OCR strings (all rotations, both sides); imprints:
+    {key: recorded imprint}; weight: token -> rarity (an ImprintIndex's .weight over the catalogue; a token it doesn't
+    know counts as rare, 1.0); distinct: count only tokens that tell the keys apart (distinct_tokens). Returns {key:
+    weight of its best token found}, for hits of at least min_weight.
+    """
+    text = [compact(r) for r in reads if compact(r)]
+    if not text:
+        return {}
+    weight = weight or {}
+    tokens = distinct_tokens(imprints) if distinct else {key: imprint_tokens(i) for key, i in imprints.items()}
+    hits = {}
+    for key, own in tokens.items():
+        found = [weight.get(t, 1.0) for t in own if any(t in s for s in text)]
+        if found and max(found) >= min_weight:
+            hits[key] = max(found)
+    return hits

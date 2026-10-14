@@ -46,6 +46,9 @@ def reads_for(paths, centre, cache_file, reader_box):
     """OCR reads per image path, cached by path."""
     cache = json.loads(cache_file.read_text()) if cache_file.exists() else {}
     todo = [p for p in paths if str(p) not in cache]
+    if todo and cache_file.parent != EPILLS_ROOT / "data/interim/ocr" / OCR_MODEL.split("/")[-1]:
+        sys.exit(f"{cache_file} lacks {len(todo):,} reads: finish it with scripts/read_imprints_cache.py --preset "
+                 f"{cache_file.parent.name} (reading here would mix in another reader)")
     if todo:
         if reader_box[0] is None:
             from epills.core.imprint.ocr import ImprintReader
@@ -69,9 +72,12 @@ def class_sims(q_emb, ref_emb, ref_cls, n_classes):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--run", type=Path, required=True)
+    parser.add_argument("--ocr", default="base_c70", help="reads to use: base_c70 (cached here), or a preset cached by "
+                                                           "scripts/read_imprints_cache.py (large_c92)")
     args = parser.parse_args()
     run = args.run if args.run.is_absolute() else EPILLS_ROOT / args.run
-    cache_dir = EPILLS_ROOT / "data/interim/ocr" / OCR_MODEL.split("/")[-1]
+    cache_dir = EPILLS_ROOT / "data/interim/ocr" / (OCR_MODEL.split("/")[-1] if args.ocr == "base_c70" else args.ocr)
+    val_cache = "validation.json" if args.ocr == "base_c70" else "validation_all.json"
     cache_dir.mkdir(parents=True, exist_ok=True)
     reader = [None]
 
@@ -104,7 +110,7 @@ def main():
     v_sims = class_sims(val_emb[keep.index.to_numpy()], ref_emb, ref_cls, len(classes))
     v_right = np.searchsorted(classes, keep.cls.to_numpy())
     v_reads = reads_for([EPILLS_ROOT / "data/interim/c3pi/crops/images" / p for p in keep.crop_path], 0.7,
-                        cache_dir / "validation.json", reader)
+                        cache_dir / val_cache, reader)
     grid = []
     for k in TOP_KS:
         for a in ALPHAS:
@@ -140,7 +146,9 @@ def main():
         "test_reads_with_own_token": float(np.mean([index.scores(r, [c])[0] > 0 for r, c in zip(t_reads, q_cls)])),
         "paper_best_two_sided": {"MAP": 0.9576, "GAP": 0.8120, "MAP@1": 0.9201, "GAP@1": 0.9119},
     }
-    (run / "eval/epillid_imprint.json").write_text(json.dumps(result, indent=2))
+    result["ocr"] = args.ocr
+    (run / ("eval/epillid_imprint.json" if args.ocr == "base_c70" else f"eval/epillid_imprint_{args.ocr}.json")
+     ).write_text(json.dumps(result, indent=2))
     for side in ("two_sided", "single_photo"):
         for how in ("plain", "imprint"):
             r = result[side][how]

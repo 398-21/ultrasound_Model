@@ -10,3 +10,5 @@ pillow>=11
 huggingface_hub>=0.24     # downloads the model, catalogue and safety.sqlite from the private assets repo
 python-multipart>=0.0.9   # image uploads
 opencv-python-headless>=4.10   # the stand-in pill finder (/v1/scan)
+pypdf>=5.0                # prescriptions as PDF: the text layer
+pypdfium2>=4.30           # scanned PDFs: pages rendered for the text reader

@@ -54,6 +54,7 @@ def label_warnings(rxcui=None, ingredient=None, max_chars=2000, fetch=None):
                     text = " ".join(r[name])
                     sections[name] = text[:max_chars] + ("…" if len(text) > max_chars else "")
             of = r.get("openfda", {})
+            set_id = r.get("set_id")
             return {
                 "brand_name": (of.get("brand_name") or [None])[0],
                 "generic_name": (of.get("generic_name") or [None])[0],
@@ -61,5 +62,9 @@ def label_warnings(rxcui=None, ingredient=None, max_chars=2000, fetch=None):
                 "matched_by": q.split(":")[0].replace("openfda.", ""),
                 "sections": sections,
                 "disclaimer": DISCLAIMER,
+                # for citation (the blueprint's Medication Knowledge tool): which label, from where
+                "source": "US FDA drug label (structured product labeling), via openFDA",
+                "set_id": set_id, "label_id": r.get("id"),
+                "url": f"https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid={set_id}" if set_id else None,
             }
     return None

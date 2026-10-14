@@ -125,8 +125,60 @@ def test_search_by_brand_and_generic(catalogue):
     assert [p["pill_id"] for p in catalogue.search("metformin", FakeRxNorm(), strength="50 MG")[0]] == ["B_1"]
 
 
+def test_search_by_international_name(catalogue, monkeypatch):
+    from epills.core import label
+    monkeypatch.setitem(label.INN_TO_US, "metforminum", ["metformin"])  # like co-amoxiclav: RxNorm lacks the name
+    products, resolution = catalogue.search("Metforminum", FakeRxNorm())
+    assert [(p["pill_id"], p["match"]) for p in products] == [("A_1", "same"), ("B_1", "contains")]
+    assert resolution["us_names"] == ["metformin"] and resolution["rxnorm"] == "ok"
+    assert [p["pill_id"] for p in catalogue.search("metforminum", None)[0]] == ["A_1", "B_1"]  # offline: US names
+
+
+def test_look_alike_strengths_share_ingredients_shape_and_colour(tmp_path):
+    """Test case M02: another strength that looks the same is listed, so the strength is left to the label."""
+    products = [PRODUCTS[0],
+                {**PRODUCTS[0], "pill_id": "D_1", "imprint": "M;548",
+                 "rxnorm_name": "metformin hydrochloride 850 MG Oral Tablet"},
+                {**PRODUCTS[0], "pill_id": "E_1", "colour": "YELLOW",
+                 "rxnorm_name": "metformin hydrochloride 1000 MG Oral Tablet"}]
+    ingredients = [(p["pill_id"], "6809", "metformin") for p in products]
+    (tmp_path / "images").mkdir()
+    write_catalogue(tmp_path, products, ingredients, [], [unit(1, 0, 0, 0)] * 3, ["A_1", "D_1", "E_1"],
+                    ["reference"] * 3, {"model_version": "test-1"})
+    cat = Catalogue(tmp_path)
+    assert cat.look_alike_strengths("A_1") == [{"pill_id": "D_1", "strength": "850 MG", "release": "IR"}]
+    assert cat.look_alike_strengths("E_1") == []  # another colour: the photo can tell it apart
+
+
 def test_product_and_image(catalogue):
     p = catalogue.product("A_1")
     assert p["ingredients"] == [{"rxcui": "6809", "name": "metformin"}] and p["images"][0]["kind"] == "rximage"
     assert catalogue.image_file("A_1", 0).exists() and catalogue.image_file("A_1", 5) is None
     assert catalogue.product("nope") is None
+
+
+def test_identify_confidence_is_only_given_for_the_model_it_was_fitted_on():
+    from epills.core.catalogue.confidence import MODEL_VERSION, assess
+    clear = [{"similarity": 0.99, "imprint_read": 1.0}, {"similarity": 0.95, "imprint_read": 0.0}]
+    close = [{"similarity": 0.96, "imprint_read": 0.0}, {"similarity": 0.959, "imprint_read": 0.0}]
+    weak = [{"similarity": 0.93, "imprint_read": 0.0}, {"similarity": 0.90, "imprint_read": 0.0}]
+    a = assess(clear, MODEL_VERSION)
+    assert a["verdict"] == "possible_match" and a["confidence"] > 0.9 and a["catalogue_fit"] == "good"
+    assert assess(close, MODEL_VERSION)["verdict"] != "possible_match"
+    assert assess(weak, MODEL_VERSION)["verdict"] == "no_confident_match"  # similar-looking, but a poor fit
+    assert assess(clear, "another-model") is None and assess(clear[:1], MODEL_VERSION) is None
+
+
+def test_product_identity_keeps_strength_form_and_release_apart():
+    from epills.core.catalogue.identity import product_identity
+    er = product_identity("24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet [Glucophage]")
+    ir = product_identity("metformin hydrochloride 850 MG Oral Tablet")
+    assert (er["strength"], er["release"], er["dose_form"], er["brand"]) == \
+        ("500 MG", "ER", "Extended Release Oral Tablet", "Glucophage")
+    assert (ir["strength"], ir["release"], ir["brand_or_generic"]) == ("850 MG", "IR", "generic")
+    combo = product_identity("omeprazole 40 MG / sodium bicarbonate 1100 MG Oral Capsule")
+    assert [s["ingredient"] for s in combo["strengths"]] == ["omeprazole", "sodium bicarbonate"]
+    assert product_identity("esomeprazole 40 MG Delayed Release Oral Capsule [Nexium]")["release"] == "DR"
+    pack = product_identity("{7 (ethinyl estradiol 0.025 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack")
+    assert pack["dose_form"] == "Pack" and pack["strength"] is None and len(pack["pack"]) == 2
+    assert product_identity(None)["strength"] is None

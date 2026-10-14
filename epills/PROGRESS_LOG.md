@@ -5,16 +5,15 @@ Newest entry first. The plan, gates and decisions are in [ROADMAP.md](ROADMAP.md
 
 ---
 
-## Where we are (2026-10-09)
+## Where we are (2026-10-13)
 
-Data for Stage 2 is ready and checked (gates G1–G3 passed). Your FER model is ported to PyTorch. Run 1 (the
-baseline) collapsed because of a learning-rate choice in the port; run 2 fixed it and meets all four validation
-targets. **Run 3 (+ C3PI studio reference photos, D7) is the best model**: calibrated (threshold 0.831, flip
-margin 0.150), 84% top-1 over 200 held-out medicines, ePillID MAP@1 37% (run 2: 12%). It still **doesn't
-generalise well to other phones and conditions** (MEDISEG 42%).
-The API now also names pills (from the patient's list or a 4,936-pill catalogue), shows pictures by name and
-scans a whole photo in one call (docs/features.md); all work locally on CPU. Run 4 (other photo conditions) is
-training.
+**Run 4 is the served model** (runs 5 and 6 showed no clear gain). The API is live on the free ZeroGPU Space
+(v0.8.0). The team's agent blueprint is the plan of record (docs/blueprint_review.md): Stages 1 and 2 shipped as
+v0.6.0 and v0.7.0, and the before-submission jobs B21–B27 are done. B24–B27 and the imprint re-tune for the GPU
+reader are built and tested as **v0.9.0, not yet deployed**. **Submission: 16 October.**
+
+Older summary (2026-10-09): run 3 was then the best model (84% top-1 over 200 held-out medicines; MEDISEG 42%:
+weak on other phones and conditions).
 
 ## Plan at a glance
 
@@ -30,7 +29,7 @@ training.
 | P7 Stage 3 safety engine | DDInter + RxNorm rules, dose checks, openFDA | 🟡 built and tested 2026-10-08 | Pharmacist or supervisor review of the wording | You |
 | P8 Imprint OCR | TrOCR tie-breaker (stretch goal) | ⬜ optional | — | — |
 | P9 Write-up | Report, tables, figures | ⬜ last | — | You; Claude drafts |
-| P10 API and hosting | FastAPI on Hugging Face Spaces (free) | ✅ live 2026-10-10 with run 4: https://davidpansx-pharmascan-api.hf.space (free ZeroGPU Space; `/docs`, demo `/ui`) | Replace the Space's token with a read-only one; share the URL and docs/API.md with the web teammate | You |
+| P10 API and hosting | FastAPI on Hugging Face Spaces (free) | ✅ live: https://davidpansx-pharmascan-api.hf.space, API 0.9.0 since 13 Oct (free ZeroGPU Space; `/docs`, demo `/ui`); the Space's token is read-only | Share docs/API.md and docs/evidence.md with the team | You |
 
 **Up next, in order:**
 1. Choose the model to serve: run 3 (best in C3PI conditions) or run 4 (better on other phones, safer there).
@@ -96,6 +95,149 @@ Everything runs on the desktop (RTX 4080 SUPER, Windows). The ePills Python envi
 
 Note on older entries: before 2026-10-07 (night) the cropper lived in `src/epills/datasets/`; it is now
 `src/epills/training/datasets/`. Their "Next" lists are history; the current plan is the table above.
+
+---
+
+## 2026-10-14: reader v2 decided; the CPU path checked
+
+- **Reader v2 (epoch 1) not adopted.** Full re-read of every validation, held-out and ePillID photo, then the same
+  choices on validation. Identify a little better (test: first right 80.2% → 81.2%, top 5 94.4% → 95.1%), but the
+  gallery check worse on validation (named wrongly 30 → 61, other pills accepted 6,150 → 6,361). It would only run
+  on the GPU path anyway. The served reader stays; no more fine-tuning before the cut-off.
+- **The CPU path checked** (most live calls run there: the free GPU quota is per caller). New reads cache
+  `base_c92` (Florence-2-base, framed as served). Validation chose the *same* settings as for the GPU reader
+  (identify alpha 0.05, top 100; gallery 0.5), and the GPU-fitted confidence rule holds (stated 0.96 → 94% right,
+  0.70 → 75%, 0.51 → 48%). Test: identify first right 79.2% (top 5 93.9%; it would be about 76% with the old
+  weighting); galleries named correctly 76.0% → 77.3%, named wrongly 0.06%, other pills accepted 3.77% → 3.51%.
+  So no code change; `/v1/model-info` gains `personal_gallery_with_imprint_cpu` and `catalogue_identify_cpu`.
+- New: `scripts/calibrate_identify.py --served` (scores the served rule on any reads),
+  `scripts/evaluate_reader_candidate.sh`.
+
+## 2026-10-13 (evening): the rest of the blueprint's API jobs; identify re-tuned; reader fine-tune tried
+
+- **Your decisions:** retraining is fine until 15 Oct, never after the submission; imprint reading first; finish every
+  API item from the blueprint and the team's test plan before pushing.
+- **API items finished (v0.9.0, not deployed; 87 tests pass):** B15 (withdrawal squashes the dataset repo's history
+  and checks before saying `deleted`; audit log; user labels need review: `monthly_retrain.py review`), B17
+  (`POST /v1/search-by-embedding`), B19 (`POST /v1/check-input`, tool `route_medication_image`), test case M02
+  (`look_alike_strengths` on every product, a strength note in identify), co-amoxiclav and other international names
+  in `/v1/pills/search`, the first slice end to end (`scripts/demo_first_slice.py`, 30 calls in 26 s), I01 top-k
+  recorded (`scripts/evaluate_identify_topk.py`), and **docs/evidence.md** for the judges (every test case → evidence).
+- **Identify re-tuned (no training):** the imprint re-ranking had been chosen on the ePillID benchmark; chosen again
+  on the catalogue itself (`scripts/tune_identify_rerank.py`): alpha 0.05, top 100. Held-out medicines: right product
+  first 74.8% → **80.2%**, top 5 91.7% → **94.4%**. Confidence refitted: `possible_match` right 87%, non-catalogue
+  pills called `possible_match` 7%.
+- **Reader fine-tune:** a LoRA adapter on Florence-2-large (`scripts/train_imprint_reader.py`, 19,312 photos of
+  training medicines). v1 read more imprints (validation 44.0% → 53.5%) but wrote imprints it had memorised on new
+  pills, so identify and the gallery check got worse: **rejected**. Also measured and dropped: look-alike characters
+  (O/0, B/8) and scoring each candidate's imprint. v2 (also learns to write nothing on unreadable photos and wrong
+  rotations) is training: epoch checks about 20:50 and 23:45; adopted only if catalogue identify on validation
+  improves, then the full re-read and re-tune.
+- **Deployed 0.9.0 (20:07, after your `hf auth login`; the Space kept its read-only token).** The live check found
+  one bug of mine: `/v1/model-info` served no error rates (the model's version is `stage2_run4@2026-10-09`, not
+  `stage2_run4`); fixed, tested against the catalogue's version, redeployed at 20:09. The first slice on the live
+  API: the same answers, 30 calls in 23 s. Speed: every call under 3.5 s on the CPU path; the GPU was granted once
+  (identify 1.8 s), then refused: Hugging Face's ZeroGPU quota belongs to the caller (2 minutes a day without a login),
+  so most calls run on the CPU. Documented in docs/API.md ("Speed").
+- **Reader v2, epoch 1 (400 validation photos):** own imprint read 45.0% → 50.7%, another pill's read 1.3% → 1.0%
+  (learning to write nothing worked), identify first right 82.0% → 83.0% (small; could be noise). Paused at 20:35 on
+  your request (no overnight training); epoch 2 dropped, epoch 1 kept (`outputs/imprint_reader/large_lora_v2/
+  adapter_e1.pt`).
+- **Next morning:** full check of v2 epoch 1 (~1.5 h): copy `adapter_e1.pt` to `adapter_best.pt`, then
+  `read_imprints_cache.py --preset large_lora_v2`, `tune_identify_rerank.py --ocr large_lora_v2`,
+  `evaluate_imprint_gallery.py --ocr large_lora_v2`; adopt only if identify (test) beats 80.2% and the gallery check
+  doesn't name more pills wrongly. Then decide whether a full 2-epoch run (~6 h, daytime) is worth it before the
+  15 Oct cut-off.
+- **Still open:** the team's TEVA photo; real label photos (B8).
+
+## 2026-10-13 (later): B24–B27, imprint re-tune for the GPU reader; API v0.9.0 built, not deployed
+
+- **v0.8.0 (deployed last night):** B21 (`text_reading` status, no silent fallbacks), B22 (embeddings checked;
+  `500 model_error`), B23 (input check: blisters, bottles, labels abstain). Every call under 3.5 s on the CPU path.
+  Its docs were missing from docs/API.md; added today.
+- **Overnight reads finished this morning** (the job had stopped at 23:53; resumed, nothing lost):
+  Florence-2-large reads of all 7,111 validation, 4,005 held-out and 745 ePillID crops, framed as served
+  (`data/interim/ocr/large_c92/`).
+- **Re-tune for the GPU reader:** own imprint read on 47% of test photos (was 38%). The settings chosen on validation
+  stayed the same (gallery 0.5; identify alpha 0.3, top 500); identify confidence refitted (`confidence.py`).
+  Galleries of 10, test: named correctly 76.0% → 78.3%; ePillID right product first 42% → 73% (front + back);
+  identify first candidate right 71.4% → 74.8%. Greedy decoding (78 vs 213 ms per pill) reads fewer imprints
+  (44.8% vs 50.0%): the large reader stays.
+- **B24:** `double_dose` carries `details.confirm_count` and `notify_caregiver: false`; docs/dose_rules.md item 8.
+- **B25:** `/v1/model-info` has `similarity` and `error_rates` (8 sets, each with its source file; a test checks every
+  rate against its file; empty for any other model).
+- **B26:** NRIC/FIN-shaped ids or names refused (`personal_id`, never echoed back); names optional;
+  `reference_set_id` passed through.
+- **B27:** `scripts/evaluate_same_maker_imprints.py`: 3,149 same-maker pairs sharing an imprint part: named as the
+  other 0.01%, Teva "93" 0.00%; worst pair tramadol 50 mg (TV 58) vs carvedilol 12.5 mg (TV 7295), 5.8%. Found:
+  reading only a shared part ("TV") *confirmed* wrong look-matches. Fix (`GALLERY_CONFIRM_DISTINCT`): only parts that
+  tell the patient's medicines apart confirm or contradict a match. Validation: named wrongly 35 → 30, other pills
+  accepted 6,158 → 6,150, correct −0.03 points. Using distinct parts for ties too was rejected (accepted more pills
+  that aren't the patient's).
+- `/health` gives `text_reading.gpu_model`; API version 0.9.0. docs/API.md, docs/features.md (F7),
+  docs/blueprint_review.md ("Before-submission results") updated. 81 tests pass.
+- **Not done:** deploy (no Hugging Face login in this session) and the GPU speed check (the Space's free GPU
+  allowance hasn't come back since last night; it still answers on the CPU).
+
+## 2026-10-13: blueprint Stage 2 done, API v0.7.0
+
+- B7, B9, B10, B12, B13, B14, B16 built, tested and deployed; details in docs/blueprint_review.md ("Stage 2
+  results"). New docs: docs/agent_tools.md (agent tools and traces), docs/licences.md (licences, PDPA, HSA).
+- Headlines: `/v1/read-label` now reads prescriptions and PDFs with directions, quantity and dates (source lines,
+  never inferred) and compares with the patient's list; products carry strength, form and release as fields;
+  safety answers say what could and couldn't be screened; `GET /v1/tools` for the agent; look-alike strengths
+  measured (mostly "ambiguous", rarely wrong: 0.1% overall, 0.5% when the strengths look alike).
+- Left for after the submission: B8 (needs your real label photos), B15, B17, B19; D1.
+
+---
+
+## 2026-10-12 (night): blueprint Stage 1 done, API v0.6.0 (submission 16 Oct)
+
+- Your decisions: D1 skipped for now; D2–D6 as the blueprint proposes; submission 16 October. Staged plan in
+  docs/blueprint_review.md (Stage 1 contract and safety, Stage 2 agent tools, Stage 3 freeze).
+- Stage 1 (B1–B6, B11) built, tested and deployed; results in docs/blueprint_review.md ("Stage 1 results"). In short:
+  pill count right 86–88% on 1–3-pill photos (was 28%), "looks like" wording and visual-evidence fields, required
+  embedding versions with `/v1/model-info`, calibrated `confidence` / `verdict` for `/v1/identify`, response schemas
+  and one error shape, `/v1/detect`, `/v1/scan` dose check deprecated, docs/dose_rules.md for the backend.
+- docs/API.md updated for 0.6.0. 69 tests pass.
+
+---
+
+## 2026-10-12 (later): the team's agent blueprint reviewed; job list B1-B20
+
+- Reviewed `PharmaScan_Care_Agent_Workflow.html` (hackathon Challenge 2, written against API v0.4.0) against v0.5.0:
+  **docs/blueprint_review.md** has the reflection, six decisions for you (D1-D6) and 20 jobs (B1-B20) with owners,
+  priorities and acceptance tests, to tackle one by one.
+- Checked the blueprint's two failure reports: the stand-in pill finder gives 2+ boxes on **72%** of 300 single-pill
+  C3PI photos (mostly small fragments beside the pill), and pills that aren't in the catalogue at all still get a
+  median top-1 similarity of **0.929** (7% at 0.97 or more). Both are P0 jobs (B1, B4).
+
+---
+
+## 2026-10-12: imprint reading (F7) and box/label reading (F8) in the API (v0.5.0)
+
+- Your decision: build F7 and F8 first (of F7–F10, added to docs/features.md today with the doctor-to-patient flow).
+- **F7, imprint reading.** Florence-2 reads each pill's imprint (4 rotations), on the Space's GPU.
+  - `/v1/identify` re-ranks the catalogue by the read imprint (alpha 0.3, top 500: re-chosen on validation for run 4,
+    same as run 5). ePillID test, run 4: right product first 42% → 66% (front + back), 33% → 51% (one photo).
+  - `/v1/match` / `/v1/scan`: gallery medications may carry their `imprint`. The read confirms, settles a tie, or
+    turns a match into "photograph again" when another of the patient's medicines' imprint is read; it never
+    accepts a pill the look rejected (`core.inference.matching.check_imprint`).
+  - **Measured** (`scripts/evaluate_imprint_gallery.py`; galleries of 10; OCR of all 7,111 validation and 4,005
+    held-out crops, ~10 min on the desktop GPU). Validation chose `GALLERY_MIN_WEIGHT` 0.5. Test on new medicines,
+    once: named correctly 76.0% → 77.0%, other pills accepted 3.77% → 3.54%, named wrongly 0.04% → 0.06% (within
+    the +0.1-point limit), turn-over requests 9.5% → 8.4%. The look-only baseline reproduced the calibration exactly.
+  - **Honest limit:** the own imprint is readable on only 38% of photos, so the gain is modest; it can't reach
+    near-100% on its own. Next step if wanted: fine-tune the reader on C3PI's imprint text.
+- **F8, box/label reading.** `POST /v1/read-label`: Florence-2 reads the lines, `core/label.py` finds RxNorm
+  ingredient and brand names (23,500, plus international names such as paracetamol), the strength and the dose form,
+  and resolves the exact RxNorm product. RxNorm's own fuzzy scores proved useless for finding names ("Take 2 tablets
+  4 times a day" outscores "PARACETAMOL 500MG TABLET"), hence the name list. Correct on 9 printed examples (dispensing
+  label, Lipitor, metformin, Augmentin, Panadol Extra, a misread name, co-amoxiclav, a 1% cream, no medicine); **not
+  yet tested on real phone photos**. Only lines naming a medicine are returned (labels show the patient's name).
+- The Space also runs the text reader on the lent GPU (CPU fallback); demo page `/ui` gained "Read a box or label".
+  `deploy_hf.py` no longer overwrites an existing `HF_TOKEN` Space secret (so your read-only token stays).
+- docs/API.md (new fields, imprint-check statuses, `/v1/read-label`) and docs/features.md updated. 62 tests pass.
 
 ---
 

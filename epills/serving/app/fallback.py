@@ -16,11 +16,11 @@ class GpuOrCpu:
     def device(self):
         return "zerogpu" if self.clock() >= self.cpu_until else "cpu (ZeroGPU refused a recent call)"
 
-    def __call__(self, x):
+    def __call__(self, *args):
         if self.clock() >= self.cpu_until:
             try:
-                return self.gpu(x)
+                return self.gpu(*args)
             except Exception as error:  # ZeroGPU raises gradio.Error for quota and queue refusals
                 self.cpu_until = self.clock() + self.cooldown
                 print(f"ZeroGPU refused, CPU for {self.cooldown} s: {type(error).__name__}: {error}", flush=True)
-        return self.cpu(x)
+        return self.cpu(*args)

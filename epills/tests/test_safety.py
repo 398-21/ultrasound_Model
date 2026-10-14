@@ -144,17 +144,20 @@ def test_dose_check_counts():
     names = {"met": "metformin", "aml": "amlodipine", "ator": "atorvastatin", "vitd": "vitamin D"}
     alerts, summary = check_dose(schedule, pills, names)
     types = {a.type: a for a in alerts}
-    assert set(types) == {"unknown_pill", "double_dose", "not_scheduled", "missed", "unsure_pill"}
-    assert types["double_dose"].message.startswith("This dose has two metformin pills instead of one.")
-    assert types["missed"].message.startswith("Your atorvastatin is missing from this dose.")
-    assert types["unknown_pill"].severity == "major" and types["missed"].severity == "moderate"
-    assert summary["pills_seen"] == 6 and not summary["all_ok"]
+    assert set(types) == {"unknown_pill", "double_dose", "not_scheduled", "not_seen", "unsure_pill"}
+    assert types["double_dose"].message.startswith("This photo shows two pills that look like your metformin instead "
+                                                   "of one. Please count them: if there are two,")
+    assert types["double_dose"].details["confirm_count"] and not types["double_dose"].notify_caregiver
+    assert types["not_seen"].message.startswith("I can't see your atorvastatin in this photo.")  # never "missed"
+    assert types["unknown_pill"].severity == "major" and types["not_seen"].severity == "moderate"
+    assert summary["pills_seen"] == 6 and not summary["all_ok"] and not summary["all_visually_matched"]
 
 
 def test_dose_check_all_fine():
     alerts, summary = check_dose([{"medication_id": "met", "count": 2}],
                                  [{"medication_id": "met", "decision": "match"}] * 2, {"met": "metformin"})
-    assert alerts == [] and summary["all_ok"] and summary["text"] == "I see two pills. They all match this dose."
+    assert alerts == [] and summary["all_visually_matched"] and \
+        summary["text"] == "I see two pills. They all look like the medicines of this dose."
 
 
 def test_every_message_follows_the_wording_rules(db):

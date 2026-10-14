@@ -3,7 +3,7 @@ Stage 3 rules: fixed logic on curated data, no trained model (ROADMAP §4).
 
   check_medications  when a medication is added or changed: drug-drug interactions (DDInter 2.0) and therapeutic
                      duplication (two medications sharing an active ingredient, via RxNorm)
-  check_dose         at every dose check: double doses, pills not part of this dose, missed medications, unknown and
+  check_dose         at every dose check: extra pills, pills not part of this dose, scheduled medicines not seen, unknown and
                      unsure pills (from Stage 2's matching)
 
 Alert rules from the project plan:
@@ -210,9 +210,10 @@ def check_dose(schedule, pills, names=None):
     name = lambda mid: names.get(mid, mid)
     alerts = []
     if unknown:
-        what = "One pill is" if unknown == 1 else f"{_count_words(unknown, 'pill').capitalize()} are"
+        what = "One pill doesn't" if unknown == 1 else f"{_count_words(unknown, 'pill').capitalize()} don't"
         alerts.append(Alert("unknown_pill", "major",
-                            f"{what} not one of your medicines. Please set {'it' if unknown == 1 else 'them'} aside.",
+                            f"{what} look like any of your medicines. Please set {'it' if unknown == 1 else 'them'} "
+                            "aside.",
                             [], SOURCE_SCHEDULE, details={"count": unknown}))
     for mid, n in sorted(matched.items()):
         e = expected.get(mid, 0)
@@ -223,17 +224,22 @@ def check_dose(schedule, pills, names=None):
                                 f"{'it' if n == 1 else 'them'} aside.",
                                 [mid], SOURCE_SCHEDULE, details={"found": n, "expected": 0}))
         elif n > e:
-            alerts.append(Alert("double_dose", "major",
-                                f"This dose has {_count_words(n, name(mid) + ' pill')} instead of "
-                                f"{_number_word(e)}. Please set the extra "
-                                f"{'one' if n - e == 1 else 'ones'} aside.",
-                                [mid], SOURCE_SCHEDULE, details={"found": n, "expected": e}))
+            # one pill boxed twice also looks like this (1.4% of one-pill photos with the stand-in finder, blueprint
+            # B24): the patient confirms the count before an extra pill is recorded or a caregiver is told
+            alert = Alert("double_dose", "major",
+                          f"This photo shows {_count_words(n, 'pill')} that look like your {name(mid)} instead of "
+                          f"{_number_word(e)}. Please count them: if there are {_number_word(n)}, set the extra "
+                          f"{'one' if n - e == 1 else 'ones'} aside.",
+                          [mid], SOURCE_SCHEDULE, details={"found": n, "expected": e, "confirm_count": True})
+            alert.notify_caregiver = False
+            alerts.append(alert)
     for mid, e in sorted(expected.items()):
         n = matched.get(mid, 0)
-        if n < e:
-            missing = ("is missing from this dose" if n == 0 else
-                       f"is short: {_count_words(n, 'pill')} instead of {_number_word(e)}")
-            alerts.append(Alert("missed", "moderate", f"Your {name(mid)} {missing}.", [mid], SOURCE_SCHEDULE,
+        if n < e:  # not seen in this photo: never a missed dose (the backend knows what was taken)
+            text = (f"I can't see your {name(mid)} in this photo." if n == 0 else
+                    f"I can see only {_count_words(n, 'pill')} that look like your {name(mid)}, instead of "
+                    f"{_number_word(e)}.")
+            alerts.append(Alert("not_seen", "moderate", text, [mid], SOURCE_SCHEDULE,
                                 details={"found": n, "expected": e}))
     if ambiguous:
         alerts.append(Alert("unsure_pill", "moderate",
@@ -244,8 +250,10 @@ def check_dose(schedule, pills, names=None):
     total = len(pills)
     summary = {
         "pills_seen": total, "matched": sum(matched.values()), "unknown": unknown, "unsure": ambiguous,
-        "all_ok": not alerts,
+        "all_ok": not alerts,  # deprecated name of all_visually_matched
+        "all_visually_matched": not alerts,
+        "count_reliable": True,
         "text": (f"I see {_count_words(total, 'pill')}." +
-                 (" They all match this dose." if not alerts and total else "")),
+                 (" They all look like the medicines of this dose." if not alerts and total else "")),
     }
     return alerts, summary

@@ -28,6 +28,7 @@ EPILLS_ROOT = Path(__file__).resolve().parents[1]
 MODEL = EPILLS_ROOT / "outputs/serving/stage2_model.pt"
 CATALOGUE = EPILLS_ROOT / "data/processed/catalogue"
 SAFETY = EPILLS_ROOT / "data/processed/safety/safety.sqlite"
+ADAPTER = EPILLS_ROOT / "outputs/serving/imprint_adapter.pt"  # optional (train_imprint_reader.py --export)
 GRADIO_VERSION = "6.30.0"  # the Space installs it; serving/space_app.py was tested with it
 SPACE_README = """---
 title: PharmaScan API
@@ -50,6 +51,13 @@ def api():
     return HfApi(token=os.environ.get("HF_TOKEN"))  # None: the token saved by `hf auth login`
 
 
+def has_secret(h, repo, key):
+    """Whether the Space already has this secret (names only; values can't be read back)."""
+    from huggingface_hub.utils import build_hf_headers, get_session
+    r = get_session().get(f"{h.endpoint}/api/spaces/{repo}/secrets", headers=build_hf_headers(token=h.token))
+    return r.status_code == 200 and key in r.json()
+
+
 def model_version():
     import torch
     return torch.load(MODEL, map_location="cpu", weights_only=False)["version"]
@@ -65,7 +73,10 @@ def deploy_assets(user):
             for f in sorted(CATALOGUE.rglob("*")):
                 if f.is_file():
                     tar.add(f, arcname=f.relative_to(CATALOGUE).as_posix())
-        for path, name in ((MODEL, "stage2_model.pt"), (tar_path, "catalogue.tar"), (SAFETY, "safety.sqlite")):
+        files = [(MODEL, "stage2_model.pt"), (tar_path, "catalogue.tar"), (SAFETY, "safety.sqlite")]
+        if ADAPTER.exists():
+            files.append((ADAPTER, "imprint_adapter.pt"))
+        for path, name in files:
             print(f"uploading {name} ({path.stat().st_size / 1e6:.0f} MB)", flush=True)
             h.upload_file(path_or_fileobj=str(path), path_in_repo=name, repo_id=repo,
                           commit_message=f"{name} for model {version}")
@@ -103,7 +114,9 @@ def deploy_space(user, docker=False):
     h.request_space_hardware(repo, hardware)
     h.add_space_variable(repo, "EPILLS_MODEL_REPO", f"{user}/pharmascan-assets")
     token = os.environ.get("HF_TOKEN")
-    if token:
+    if has_secret(h, repo, "HF_TOKEN"):  # e.g. a read-only token put there by hand: never overwrite it
+        print("kept the Space's HF_TOKEN secret")
+    elif token:
         h.add_space_secret(repo, "HF_TOKEN", token)  # the Space reads the private assets repo with it
     else:
         print("note: set HF_TOKEN before running this, or add a read token as the Space secret HF_TOKEN yourself "

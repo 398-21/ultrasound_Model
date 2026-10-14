@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PharmaScan Care — Agent Workflow & API Blueprint</title><style>
+:root{--ink:#17253e;--secondary:#64748b;--accent:#187c71;--line:#dce4e9;--bg:#f5f7fa;--panel:#fff;--red:#a8493f;--shadow:0 12px 50px rgba(26,44,62,.05)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC",Arial,sans-serif;color:var(--ink);background:var(--bg)}
+body:before{content:"";position:absolute;top:0;left:0;width:100%;height:240px;background:linear-gradient(115deg,#edf5f3,#edf1f9 75%);z-index:-1}
+button,input{font:inherit}button{cursor:pointer}a{color:#126f7b;text-decoration:none}a:hover{text-decoration:underline}
+.header{padding:38px max(32px,calc((100vw - 1500px)/2)) 24px}.brand{display:flex;align-items:center;gap:12px;color:#187c71;font-weight:800;font-size:14px;letter-spacing:.13em}.logo{border-radius:10px;background:#1b726b;color:white;width:31px;height:31px;display:grid;place-items:center}.tag{display:inline-block;background:#e3f3ed;color:#1d7a63;padding:6px 10px;font-size:11px;border-radius:50px;margin-left:10px;letter-spacing:.03em}.header h1{font-size:clamp(30px,3.2vw,48px);letter-spacing:-.035em;margin:16px 0 6px}.header p{font-size:15px;color:var(--secondary);max-width:900px;line-height:1.7;margin:0}.summary-stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}.stat{font-size:12px;background:#fff;border:1px solid #e3ebee;padding:9px 13px;border-radius:9px}.stat strong{color:#147d72}
+.layout{display:grid;grid-template-columns:240px minmax(0,1fr) 330px;gap:18px;padding:6px max(28px,calc((100vw - 1500px)/2)) 80px;align-items:start}.sidebar,.inspector{position:sticky;top:16px;background:var(--panel);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow)}.sidebar{padding:12px}.sidebar-title{font-size:10px;text-transform:uppercase;letter-spacing:.14em;font-weight:800;color:#91a0af;padding:12px 13px}.nav-btn{border:0;display:flex;align-items:center;text-align:left;width:100%;background:transparent;border-radius:9px;padding:11px;gap:11px;color:#45556b}.nav-btn:hover{background:#f3f6f8}.nav-btn.active{background:#e8f4f2;color:#135e57}.nav-circle{display:grid;place-items:center;border:1px solid #dbe6e5;border-radius:10px;width:28px;height:28px;font-size:12px;flex-shrink:0}.nav-btn.active .nav-circle{background:#1d756d;color:#fff;border-color:#1d756d}.nav-btn strong{display:block;font-size:12px}.nav-btn small{display:block;font-size:10px;color:#8995a6;line-height:1.5;padding-top:2px}.sidebar-divider{height:1px;background:var(--line);margin:12px 6px}.sidebar-secondary{display:block;width:100%;text-align:left;background:none;border:0;border-radius:9px;padding:11px 13px;font-size:12px;color:#526175}.sidebar-secondary:hover,.sidebar-secondary.active{background:#e8f4f2;color:#135e57}
+.main{min-width:0}.flow-section,.doc-section{display:none}.flow-section.active,.doc-section.active{display:block}.section-intro{margin-bottom:15px}.kicker{font-size:10px;font-weight:800;color:#168174;letter-spacing:.18em}.section-intro h2{font-size:25px;margin:7px 0 6px}.section-intro p{color:var(--secondary);line-height:1.7;font-size:13px;margin:0;max-width:880px}.graph-toolbar{border:1px solid var(--line);border-bottom:0;background:white;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 15px;border-radius:14px 14px 0 0}.graph-tip{font-size:11px;color:#91a0ad}.controls{display:flex;gap:5px}.controls button{background:#f7f9fb;border:1px solid #e2e9ef;border-radius:7px;padding:6px 10px;font-size:12px;color:#42516c;min-width:32px}.controls button:hover{background:#e8f4f2}.graph-scroll{height:68vh;min-height:490px;overflow:auto;background:white;border:1px solid var(--line);border-radius:0 0 14px 14px;box-shadow:var(--shadow);padding:12px}.graph-stage{width:100%;margin:0 auto;transition:width .12s ease}.graph-stage svg{display:block;margin:auto;width:100%;height:auto;min-width:550px}.graph-stage g.node{cursor:pointer;transition:filter .12s}.graph-stage g.node:hover{filter:drop-shadow(0 4px 8px rgba(30,54,70,.18))}.graph-stage g.node.active polygon,.graph-stage g.node.active path{stroke:#087f72!important;stroke-width:3px!important}
+.inspector{padding:21px;min-height:410px}.inspector h3{margin:8px 0 12px;font-size:18px;line-height:1.35}.inspector .help{font-size:12px;line-height:1.7;color:var(--secondary)}.inspector .kv{border-top:1px solid var(--line);padding:12px 0}.inspector .kv .key{font-weight:800;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8292a3;margin-bottom:5px}.inspector .kv .value{font-size:12px;line-height:1.6;overflow-wrap:anywhere}.inspector .type{font-weight:700;font-size:10px;padding:5px 9px;background:#e6f4ef;border-radius:30px;color:#227d67;display:inline-block}.legend{font-size:11px;color:#627487;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:15px;border-top:1px solid var(--line)}.legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}.footnote{padding:14px 0;font-size:11px;color:#93a0aa;line-height:1.55}.paper{background:white;border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:var(--shadow)}.paper h2{margin:0 0 8px;font-size:22px}.paper p{font-size:13px;line-height:1.75;color:var(--secondary)}.section-label{font-size:10px;color:#078074;letter-spacing:.16em;font-weight:800;margin-bottom:7px}.audit-callout{border-left:3px solid #b45649;background:#fff7f5;padding:15px 19px;margin:15px 0;border-radius:0 9px 9px 0}.audit-callout strong{color:#a94c3e}.audit-callout p{margin:7px 0 0;color:#815c58}.table-scroll{overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:11px}.datatable{border-collapse:collapse;width:100%;font-size:12px;min-width:1050px}.datatable th{position:sticky;top:0;background:#f5f8fa;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:13px 11px;color:#62748b;border-bottom:1px solid #dee7ed;z-index:1}.datatable td{padding:11px;border-bottom:1px solid #edf1f4;line-height:1.55;vertical-align:top;color:#415269}.datatable .endpoint{color:#126d7b;font-weight:700}.datatable tr:hover{background:#f9fbfc}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px}.datatable td:nth-child(5){min-width:260px}.testtxt{min-width:215px}.pill{display:inline-block;font-size:10px;padding:3px 7px;font-weight:750;border-radius:6px}.sev-red{background:#ffebea;color:#a64a42}.sev-amber{background:#fff1d5;color:#975e11}.sev-grey{background:#edf0f5;color:#6b7280}.filterbar{display:flex;align-items:center;gap:10px;margin:15px 0}.filterbar input{flex:1;padding:11px 12px;border:1px solid #dbe4e9;border-radius:9px;min-width:0;outline-color:#76b5ab}.filterbar select{padding:10px;border:1px solid #dbe4e9;border-radius:9px;background:#fff}.scenario{border:1px solid #e1e8ed;border-radius:12px;margin-bottom:12px;background:#fff}.scenario summary{cursor:pointer;padding:15px;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:15px}.scenario summary:after{content:"+";font-size:20px;color:#8ba1aa}.scenario[open] summary:after{content:"−"}.scenario-head{font-weight:700;font-size:13px}.scenario-who{font-size:11px;color:#8293a4;margin-left:auto}.scenario-body{padding:0 20px 18px;border-top:1px solid #ebeff2}.scenario-body ol{font-size:12px;line-height:1.9;padding-left:18px;color:#4b6070}.scenario-body li{padding:3px 0}.meta{border-top:1px solid #ebeff2;padding-top:12px;font-size:12px}.meta strong{display:block;margin:12px 0 4px;color:#14817b}.meta code{display:block;white-space:normal;overflow-wrap:anywhere;color:#597290;font-size:11px;background:#f4f7fb;padding:8px;border-radius:7px}.meta p{margin:3px 0}.roadmap-row{display:grid;grid-template-columns:155px 1fr;gap:16px;padding:18px 0;border-bottom:1px solid #e8eef2;font-size:13px;line-height:1.6}.phase{font-weight:800;color:#15786f}.review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.review-card{padding:15px;border:1px solid #e1e9ef;border-radius:11px}.review-card h4{font-size:13px;margin:0 0 7px}.review-card p{font-size:12px;margin:0}.recommend{background:#edf7f4;border:1px solid #b9dfd6;padding:16px;border-radius:12px;color:#1f625c;font-size:13px;line-height:1.7;margin:14px 0}.mobile-hint{display:none}.footer{padding:30px max(28px,calc((100vw - 1500px)/2));color:#80929e;font-size:11px}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}.scope{border:1px solid #e0e9ed;padding:16px;border-radius:10px}.scope strong{font-size:13px}.scope p{font-size:12px;margin:7px 0}.scope ul{font-size:12px;line-height:1.85;padding-left:18px;color:#566979}
+@media(max-width:1320px){.layout{grid-template-columns:200px minmax(0,1fr)}.inspector{grid-column:2;position:relative;top:0;min-height:0}.header,.layout{padding-left:25px;padding-right:25px}.sidebar{top:14px}.graph-scroll{height:65vh}}@media(max-width:770px){.header{padding:23px 15px}.header h1{font-size:29px}.layout{display:block;padding:10px 14px 40px}.sidebar{position:relative;margin-bottom:17px;top:0}.sidebar-title{display:none}.nav-btn{display:inline-flex;width:auto;min-width:110px;padding:9px}.sidebar .nav-grid{display:flex;overflow:auto;gap:3px}.nav-btn small{display:none}.nav-circle{width:23px;height:23px}.sidebar-divider{margin:9px 5px}.sidebar-secondary{display:inline-block;width:auto}.graph-scroll{height:60vh;min-height:380px}.graph-stage svg{min-width:640px}.inspector{margin-top:16px;padding:16px}.graph-toolbar{padding:9px}.graph-tip{font-size:10px}.paper{padding:18px}.review-grid,.two-col{grid-template-columns:1fr}.roadmap-row{grid-template-columns:1fr;gap:2px}.footer{padding:20px}.mobile-hint{display:block}}
+</style></head>
+<body><header class="header"><div class="brand"><div class="logo">✚</div> PHARMASCAN CARE <span class="tag">2026 Hackathon · Challenge 2</span></div><h1>Medication Care Agent Blueprint</h1><p>真正的 AI Agent 工作流，而不是固定图像分类 Pipeline。基于当前提交的 PharmaScan API OpenAPI v0.4.0、单颗药片 Scan 测试和项目 MVP 决策。<strong>交互式架构设计文件，不是已部署的医疗软件。</strong></p><div class="summary-stats"><span class="stat"><strong>6</strong> 个可点击 Flow</span><span class="stat"><strong>20</strong> 项 API / Tool 决策</span><span class="stat"><strong>5</strong> 个端到端 Demo 剧本</span><span class="stat">Patient + consent-based Caregiver</span><span class="stat">Stage 2 已部署 / App 尚待构建</span></div></header>
+<div class="layout"><nav class="sidebar"><div class="sidebar-title">Interactive flows</div><div class="nav-grid"><button class="nav-btn" data-view="overview"><span class="nav-circle">1</span><span><strong>架构总览</strong><small>各层责任与数据边界</small></span></button><button class="nav-btn" data-view="enrollment"><span class="nav-circle">2</span><span><strong>Enrollment</strong><small>新药登记 / 用药计划更新</small></span></button><button class="nav-btn" data-view="dose"><span class="nav-circle">3</span><span><strong>Daily Dose</strong><small>每次服药验证与事件记录</small></span></button><button class="nav-btn" data-view="unknown"><span class="nav-circle">4</span><span><strong>Unknown Item</strong><small>未知药片 / 包装识别</small></span></button><button class="nav-btn" data-view="longitudinal"><span class="nav-circle">5</span><span><strong>Long-term Care</strong><small>长期依从、健康追踪与复诊准备</small></span></button><button class="nav-btn" data-view="agent"><span class="nav-circle">6</span><span><strong>Agent Loop</strong><small>Observe → Tools → Adapt → Memory</small></span></button></div><div class="sidebar-divider"></div><button class="sidebar-secondary" data-view="api">API 问题与开发清单</button><button class="sidebar-secondary" data-view="tests">5 个 Demo 剧本</button><button class="sidebar-secondary" data-view="roadmap">开发优先级与边界</button><button class="sidebar-secondary" data-view="principles">数据与医疗安全约束</button></nav><main class="main"><section class="flow-section" id="panel-overview"><div class="section-intro"><div class="kicker">FLOW 01</div><h2>架构总览</h2><p>各层责任与数据边界。点击流程中的任何节点，可查看责任归属、工具、证据和实现状态。</p></div><div class="graph-toolbar"><span class="graph-tip">拖动滚动区查看完整流程；图可缩放</span><div class="controls"><button class="zoom-out" aria-label="Zoom out">−</button><button class="zoom-reset">重置</button><button class="zoom-in" aria-label="Zoom in">+</button></div></div><div class="graph-scroll"><div class="graph-stage"><svg width="100%" height="auto"
+ viewBox="0.00 0.00 750.20 518.20" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(21.6 496.6)">
+<title>G</title>
+<!-- ov_patient&#45;&gt;ov_agent -->
+<g id="edge1" class="edge">
+<title>ov_patient&#45;&gt;ov_agent</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M360.5,-432.98C360.5,-422.66 360.5,-409.93 360.5,-398.78"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="362.78,-398.57 360.5,-392.07 358.23,-398.57 362.78,-398.57"/>
+</g>
+<!-- ov_agent&#45;&gt;ov_store -->
+<g id="edge2" class="edge">
+<title>ov_agent&#45;&gt;ov_store</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M291.78,-349.98C251.1,-338.12 199.52,-323.1 157.75,-310.92"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="158.27,-308.71 151.39,-309.07 157,-313.08 158.27,-308.71"/>
+</g>
+<!-- ov_agent&#45;&gt;ov_vision -->
+<g id="edge3" class="edge">
+<title>ov_agent&#45;&gt;ov_vision</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M338.01,-349.98C325.65,-338.98 310.21,-325.24 297.13,-313.59"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="298.42,-311.7 292.05,-309.07 295.39,-315.09 298.42,-311.7"/>
+</g>
+<!-- ov_agent&#45;&gt;ov_ocr -->
+<g id="edge4" class="edge">
+<title>ov_agent&#45;&gt;ov_ocr</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M383.74,-349.98C396.5,-338.98 412.44,-325.24 425.96,-313.59"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="427.77,-315.04 431.21,-309.07 424.8,-311.59 427.77,-315.04"/>
+</g>
+<!-- ov_agent&#45;&gt;ov_knowledge -->
+<g id="edge5" class="edge">
+<title>ov_agent&#45;&gt;ov_knowledge</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M428.23,-349.98C468.33,-338.12 519.16,-323.1 560.34,-310.92"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="561.01,-313.1 566.6,-309.07 559.72,-308.73 561.01,-313.1"/>
+</g>
+<!-- ov_store&#45;&gt;ov_policy -->
+<g id="edge6" class="edge">
+<title>ov_store&#45;&gt;ov_policy</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M151.47,-266.98C192.29,-255.12 244.06,-240.1 285.98,-227.92"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="286.75,-230.07 292.36,-226.07 285.48,-225.7 286.75,-230.07"/>
+</g>
+<!-- ov_vision&#45;&gt;ov_policy -->
+<g id="edge7" class="edge">
+<title>ov_vision&#45;&gt;ov_policy</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M292.24,-266.98C304.74,-255.98 320.34,-242.24 333.57,-230.59"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="335.33,-232.08 338.7,-226.07 332.32,-228.66 335.33,-232.08"/>
+</g>
+<!-- ov_ocr&#45;&gt;ov_policy -->
+<g id="edge8" class="edge">
+<title>ov_ocr&#45;&gt;ov_policy</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M431.51,-266.98C418.88,-255.98 403.11,-242.24 389.73,-230.59"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="390.94,-228.63 384.55,-226.07 387.95,-232.06 390.94,-228.63"/>
+</g>
+<!-- ov_knowledge&#45;&gt;ov_policy -->
+<g id="edge9" class="edge">
+<title>ov_knowledge&#45;&gt;ov_policy</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M567.02,-266.98C527.07,-255.12 476.41,-240.1 435.39,-227.92"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="436.03,-225.74 429.15,-226.07 434.74,-230.1 436.03,-225.74"/>
+</g>
+<!-- ov_policy&#45;&gt;ov_actions -->
+<g id="edge10" class="edge">
+<title>ov_policy&#45;&gt;ov_actions</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M361.5,-183.58C361.5,-170.83 361.5,-154.29 361.5,-140.53"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="363.78,-140.53 361.5,-134.03 359.23,-140.53 363.78,-140.53"/>
+<text text-anchor="middle" x="389" y="-156.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">授权后的行动</text>
+</g>
+<!-- ov_actions&#45;&gt;ov_care -->
+<g id="edge11" class="edge">
+<title>ov_actions&#45;&gt;ov_care</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M361.5,-91.58C361.5,-78.83 361.5,-62.29 361.5,-48.53"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="363.78,-48.53 361.5,-42.03 359.23,-48.53 363.78,-48.53"/>
+<text text-anchor="middle" x="375.5" y="-64.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">需授权</text>
+</g>
+<!-- ov_patient -->
+<g id="ov_patient" class="node">
+<title>ov_patient</title>
+<path fill="#eaf2ff" stroke="#2b5b9b" stroke-width="1.15" d="M405.5,-475C405.5,-475 315.5,-475 315.5,-475 309.5,-475 303.5,-469 303.5,-463 303.5,-463 303.5,-445 303.5,-445 303.5,-439 309.5,-433 315.5,-433 315.5,-433 405.5,-433 405.5,-433 411.5,-433 417.5,-439 417.5,-445 417.5,-445 417.5,-463 417.5,-463 417.5,-469 411.5,-475 405.5,-475"/>
+<text text-anchor="middle" x="360.5" y="-457.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">患者 Patient</text>
+<text text-anchor="middle" x="360.5" y="-445.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">语音 / 文本 / 上传</text>
+</g>
+<!-- ov_agent -->
+<g id="ov_agent" class="node">
+<title>ov_agent</title>
+<path fill="#e7f5f2" stroke="#147d72" stroke-width="1.15" d="M431.5,-392C431.5,-392 289.5,-392 289.5,-392 283.5,-392 277.5,-386 277.5,-380 277.5,-380 277.5,-362 277.5,-362 277.5,-356 283.5,-350 289.5,-350 289.5,-350 431.5,-350 431.5,-350 437.5,-350 443.5,-356 443.5,-362 443.5,-362 443.5,-380 443.5,-380 443.5,-386 437.5,-392 431.5,-392"/>
+<text text-anchor="middle" x="360.5" y="-374.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Medication Care Agent</text>
+<text text-anchor="middle" x="360.5" y="-362.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">意图 → 计划 → 工具 → 追问</text>
+</g>
+<!-- ov_store -->
+<g id="ov_store" class="node">
+<title>ov_store</title>
+<path fill="#f4f6f9" stroke="#536178" stroke-width="1.15" d="M153,-309C153,-309 12,-309 12,-309 6,-309 0,-303 0,-297 0,-297 0,-279 0,-279 0,-273 6,-267 12,-267 12,-267 153,-267 153,-267 159,-267 165,-273 165,-279 165,-279 165,-297 165,-297 165,-303 159,-309 153,-309"/>
+<text text-anchor="middle" x="82.5" y="-291.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Patient Context &amp; Memory</text>
+<text text-anchor="middle" x="82.5" y="-279.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Regimen / Gallery / History</text>
+</g>
+<!-- ov_vision -->
+<g id="ov_vision" class="node">
+<title>ov_vision</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M335,-309C335,-309 204,-309 204,-309 198,-309 192,-303 192,-297 192,-297 192,-279 192,-279 192,-273 198,-267 204,-267 204,-267 335,-267 335,-267 341,-267 347,-273 347,-279 347,-279 347,-297 347,-297 347,-303 341,-309 335,-309"/>
+<text text-anchor="middle" x="269.5" y="-291.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">PharmaScan Vision API</text>
+<text text-anchor="middle" x="269.5" y="-279.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">embed / match / identify</text>
+</g>
+<!-- ov_ocr -->
+<g id="ov_ocr" class="node">
+<title>ov_ocr</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M523,-309C523,-309 386,-309 386,-309 380,-309 374,-303 374,-297 374,-297 374,-279 374,-279 374,-273 380,-267 386,-267 386,-267 523,-267 523,-267 529,-267 535,-273 535,-279 535,-279 535,-297 535,-297 535,-303 529,-309 523,-309"/>
+<text text-anchor="middle" x="454.5" y="-291.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Document &amp; Package OCR</text>
+<text text-anchor="middle" x="454.5" y="-279.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">PDF / 有字包装</text>
+</g>
+<!-- ov_knowledge -->
+<g id="ov_knowledge" class="node">
+<title>ov_knowledge</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M695,-309C695,-309 574,-309 574,-309 568,-309 562,-303 562,-297 562,-297 562,-279 562,-279 562,-273 568,-267 574,-267 574,-267 695,-267 695,-267 701,-267 707,-273 707,-279 707,-279 707,-297 707,-297 707,-303 701,-309 695,-309"/>
+<text text-anchor="middle" x="634.5" y="-291.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Medication Knowledge</text>
+<text text-anchor="middle" x="634.5" y="-279.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">患者易懂解释</text>
+</g>
+<!-- ov_policy -->
+<g id="ov_policy" class="node">
+<title>ov_policy</title>
+<path fill="#fff1df" stroke="#b66c12" stroke-width="1.15" d="M428.5,-226C428.5,-226 294.5,-226 294.5,-226 288.5,-226 282.5,-220 282.5,-214 282.5,-214 282.5,-196 282.5,-196 282.5,-190 288.5,-184 294.5,-184 294.5,-184 428.5,-184 428.5,-184 434.5,-184 440.5,-190 440.5,-196 440.5,-196 440.5,-214 440.5,-214 440.5,-220 434.5,-226 428.5,-226"/>
+<text text-anchor="middle" x="361.5" y="-208.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Deterministic Safety Gate</text>
+<text text-anchor="middle" x="361.5" y="-196.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">来源 / 冲突 / 权限 / 不确定</text>
+</g>
+<!-- ov_actions -->
+<g id="ov_actions" class="node">
+<title>ov_actions</title>
+<path fill="#e6f5ec" stroke="#2e8058" stroke-width="1.15" d="M437,-134C437,-134 286,-134 286,-134 280,-134 274,-128 274,-122 274,-122 274,-104 274,-104 274,-98 280,-92 286,-92 286,-92 437,-92 437,-92 443,-92 449,-98 449,-104 449,-104 449,-122 449,-122 449,-128 443,-134 437,-134"/>
+<text text-anchor="middle" x="361.5" y="-116.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Patient Action / Memory</text>
+<text text-anchor="middle" x="361.5" y="-104.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">确认、记录、提醒、复诊摘要</text>
+</g>
+<!-- ov_care -->
+<g id="ov_care" class="node">
+<title>ov_care</title>
+<path fill="#eaf2ff" stroke="#2b5b9b" stroke-width="1.15" d="M409,-42C409,-42 314,-42 314,-42 308,-42 302,-36 302,-30 302,-30 302,-12 302,-12 302,-6 308,0 314,0 314,0 409,0 409,0 415,0 421,-6 421,-12 421,-12 421,-30 421,-30 421,-36 415,-42 409,-42"/>
+<text text-anchor="middle" x="361.5" y="-24.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Linked Caregiver</text>
+<text text-anchor="middle" x="361.5" y="-12.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">经授权的有限通知</text>
+</g>
+</g>
+</svg></div></div></section><section class="flow-section" id="panel-enrollment"><div class="section-intro"><div class="kicker">FLOW 02</div><h2>Enrollment</h2><p>新药登记 / 用药计划更新。点击流程中的任何节点，可查看责任归属、工具、证据和实现状态。</p></div><div class="graph-toolbar"><span class="graph-tip">拖动滚动区查看完整流程；图可缩放</span><div class="controls"><button class="zoom-out" aria-label="Zoom out">−</button><button class="zoom-reset">重置</button><button class="zoom-in" aria-label="Zoom in">+</button></div></div><div class="graph-scroll"><div class="graph-stage"><svg width="100%" height="auto"
+ viewBox="0.00 0.00 602.70 859.20" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(21.6 837.6)">
+<title>G</title>
+<!-- en_start&#45;&gt;en_source -->
+<g id="edge1" class="edge">
+<title>en_start&#45;&gt;en_source</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M389.5,-773.98C389.5,-763.66 389.5,-750.93 389.5,-739.78"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="391.78,-739.57 389.5,-733.07 387.23,-739.57 391.78,-739.57"/>
+</g>
+<!-- en_source&#45;&gt;en_ocr -->
+<g id="edge2" class="edge">
+<title>en_source&#45;&gt;en_ocr</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M374.07,-690.58C364.18,-677.48 351.26,-660.38 340.7,-646.41"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="342.37,-644.85 336.63,-641.03 338.74,-647.59 342.37,-644.85"/>
+<text text-anchor="middle" x="378.5" y="-663.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">图片/PDF</text>
+</g>
+<!-- en_source&#45;&gt;en_review -->
+<g id="edge3" class="edge">
+<title>en_source&#45;&gt;en_review</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M397.6,-690.75C405.87,-670.08 417.5,-641 417.5,-641 417.5,-641 417.5,-599 417.5,-599 417.5,-599 409.15,-580.8 401.56,-564.28"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="403.6,-563.27 398.82,-558.31 399.47,-565.17 403.6,-563.27"/>
+<text text-anchor="middle" x="436" y="-617.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">手动录入</text>
+</g>
+<!-- en_ocr&#45;&gt;en_review -->
+<g id="edge4" class="edge">
+<title>en_ocr&#45;&gt;en_review</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M338.31,-598.98C347.38,-588.17 358.67,-574.72 368.34,-563.21"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="370.21,-564.51 372.65,-558.07 366.73,-561.59 370.21,-564.51"/>
+</g>
+<!-- en_review&#45;&gt;en_dedupe -->
+<g id="edge5" class="edge">
+<title>en_review&#45;&gt;en_dedupe</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M367.49,-515.58C353.13,-502.25 334.29,-484.78 319.09,-470.67"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="320.4,-468.78 314.09,-466.03 317.31,-472.12 320.4,-468.78"/>
+<text text-anchor="middle" x="363" y="-488.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">信息足够</text>
+</g>
+<!-- en_review&#45;&gt;en_pending -->
+<g id="edge6" class="edge">
+<title>en_review&#45;&gt;en_pending</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M411.74,-515.58C426.25,-502.25 445.28,-484.78 460.63,-470.67"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="462.44,-472.1 465.69,-466.03 459.36,-468.75 462.44,-472.1"/>
+<text text-anchor="middle" x="460.5" y="-488.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">缺失/冲突</text>
+</g>
+<!-- en_dedupe&#45;&gt;en_regimen -->
+<g id="edge7" class="edge">
+<title>en_dedupe&#45;&gt;en_regimen</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M292.5,-423.98C292.5,-413.66 292.5,-400.93 292.5,-389.78"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="294.78,-389.57 292.5,-383.07 290.23,-389.57 294.78,-389.57"/>
+</g>
+<!-- en_regimen&#45;&gt;en_risk -->
+<g id="edge8" class="edge">
+<title>en_regimen&#45;&gt;en_risk</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M292.5,-340.98C292.5,-330.66 292.5,-317.93 292.5,-306.78"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="294.78,-306.57 292.5,-300.07 290.23,-306.57 294.78,-306.57"/>
+</g>
+<!-- en_risk&#45;&gt;en_photo -->
+<g id="edge9" class="edge">
+<title>en_risk&#45;&gt;en_photo</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M292.5,-257.98C292.5,-247.66 292.5,-234.93 292.5,-223.78"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="294.78,-223.57 292.5,-217.07 290.23,-223.57 294.78,-223.57"/>
+</g>
+<!-- en_photo&#45;&gt;en_pack -->
+<g id="edge10" class="edge">
+<title>en_photo&#45;&gt;en_pack</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M245.63,-174.91C212.97,-160.92 169.35,-142.22 135.44,-127.69"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="136.09,-125.49 129.22,-125.02 134.3,-129.68 136.09,-125.49"/>
+<text text-anchor="middle" x="213" y="-147.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">包装参考</text>
+</g>
+<!-- en_photo&#45;&gt;en_embed -->
+<g id="edge11" class="edge">
+<title>en_photo&#45;&gt;en_embed</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M292.5,-174.58C292.5,-161.83 292.5,-145.29 292.5,-131.53"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="294.78,-131.53 292.5,-125.03 290.23,-131.53 294.78,-131.53"/>
+<text text-anchor="middle" x="311" y="-147.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">裸片参考</text>
+</g>
+<!-- en_photo&#45;&gt;en_activate -->
+<g id="edge12" class="edge">
+<title>en_photo&#45;&gt;en_activate</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M325.17,-174.94C358.85,-154.26 406.5,-125 406.5,-125 406.5,-125 406.5,-83 406.5,-83 406.5,-83 368.26,-62.54 336.07,-45.32"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="336.95,-43.2 330.14,-42.14 334.8,-47.22 336.95,-43.2"/>
+<text text-anchor="middle" x="425" y="-101.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">跳过图片</text>
+</g>
+<!-- en_pack&#45;&gt;en_activate -->
+<g id="edge13" class="edge">
+<title>en_pack&#45;&gt;en_activate</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M134.41,-82.98C164.7,-71.29 202.99,-56.53 234.29,-44.45"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="235.21,-46.53 240.46,-42.07 233.58,-42.29 235.21,-46.53"/>
+</g>
+<!-- en_embed&#45;&gt;en_activate -->
+<g id="edge14" class="edge">
+<title>en_embed&#45;&gt;en_activate</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M292.5,-82.98C292.5,-72.66 292.5,-59.93 292.5,-48.78"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="294.78,-48.57 292.5,-42.07 290.23,-48.57 294.78,-48.57"/>
+</g>
+<!-- en_start -->
+<g id="en_start" class="node">
+<title>en_start</title>
+<path fill="#eaf2ff" stroke="#2b5b9b" stroke-width="1.15" d="M430,-816C430,-816 349,-816 349,-816 343,-816 337,-810 337,-804 337,-804 337,-786 337,-786 337,-780 343,-774 349,-774 349,-774 430,-774 430,-774 436,-774 442,-780 442,-786 442,-786 442,-804 442,-804 442,-810 436,-816 430,-816"/>
+<text text-anchor="middle" x="389.5" y="-798.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">添加 / 更新药物</text>
+<text text-anchor="middle" x="389.5" y="-786.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Add or update</text>
+</g>
+<!-- en_source -->
+<g id="en_source" class="node">
+<title>en_source</title>
+<path fill="#eaf2ff" stroke="#2b5b9b" stroke-width="1.15" d="M478.5,-733C478.5,-733 300.5,-733 300.5,-733 294.5,-733 288.5,-727 288.5,-721 288.5,-721 288.5,-703 288.5,-703 288.5,-697 294.5,-691 300.5,-691 300.5,-691 478.5,-691 478.5,-691 484.5,-691 490.5,-697 490.5,-703 490.5,-703 490.5,-721 490.5,-721 490.5,-727 484.5,-733 478.5,-733"/>
+<text text-anchor="middle" x="389.5" y="-715.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">采集来源</text>
+<text text-anchor="middle" x="389.5" y="-703.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">PDF · 处方 · 药袋 · 包装 · 手动</text>
+</g>
+<!-- en_ocr -->
+<g id="en_ocr" class="node">
+<title>en_ocr</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M392.5,-641C392.5,-641 250.5,-641 250.5,-641 244.5,-641 238.5,-635 238.5,-629 238.5,-629 238.5,-611 238.5,-611 238.5,-605 244.5,-599 250.5,-599 250.5,-599 392.5,-599 392.5,-599 398.5,-599 404.5,-605 404.5,-611 404.5,-611 404.5,-629 404.5,-629 404.5,-635 398.5,-641 392.5,-641"/>
+<text text-anchor="middle" x="321.5" y="-623.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">OCR + 字段提取</text>
+<text text-anchor="middle" x="321.5" y="-611.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">名称 · 规格 · 剂型 · 用法</text>
+</g>
+<!-- en_review -->
+<g id="en_review" class="node">
+<title>en_review</title>
+<path fill="#fdf4de" stroke="#97640a" stroke-width="1.15" d="M437,-558C437,-558 342,-558 342,-558 336,-558 330,-552 330,-546 330,-546 330,-528 330,-528 330,-522 336,-516 342,-516 342,-516 437,-516 437,-516 443,-516 449,-522 449,-528 449,-528 449,-546 449,-546 449,-552 443,-558 437,-558"/>
+<text text-anchor="middle" x="389.5" y="-540.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">患者对照来源核对</text>
+<text text-anchor="middle" x="389.5" y="-528.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">疑问字段要澄清</text>
+</g>
+<!-- en_dedupe -->
+<g id="en_dedupe" class="node">
+<title>en_dedupe</title>
+<path fill="#f4f6f9" stroke="#536178" stroke-width="1.15" d="M376,-466C376,-466 209,-466 209,-466 203,-466 197,-460 197,-454 197,-454 197,-436 197,-436 197,-430 203,-424 209,-424 209,-424 376,-424 376,-424 382,-424 388,-430 388,-436 388,-436 388,-454 388,-454 388,-460 382,-466 376,-466"/>
+<text text-anchor="middle" x="292.5" y="-448.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">产品标识 / 疗程查重</text>
+<text text-anchor="middle" x="292.5" y="-436.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">品牌、规格、IR/XR、市场、日期</text>
+</g>
+<!-- en_pending -->
+<g id="en_pending" class="node">
+<title>en_pending</title>
+<path fill="#fff0ed" stroke="#b85646" stroke-width="1.15" d="M547.5,-466C547.5,-466 427.5,-466 427.5,-466 421.5,-466 415.5,-460 415.5,-454 415.5,-454 415.5,-436 415.5,-436 415.5,-430 421.5,-424 427.5,-424 427.5,-424 547.5,-424 547.5,-424 553.5,-424 559.5,-430 559.5,-436 559.5,-436 559.5,-454 559.5,-454 559.5,-460 553.5,-466 547.5,-466"/>
+<text text-anchor="middle" x="487.5" y="-448.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">保留 Draft / 未核实状态</text>
+<text text-anchor="middle" x="487.5" y="-436.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">不生成可靠剂量核对</text>
+</g>
+<!-- en_regimen -->
+<g id="en_regimen" class="node">
+<title>en_regimen</title>
+<path fill="#f4f6f9" stroke="#536178" stroke-width="1.15" d="M351,-383C351,-383 234,-383 234,-383 228,-383 222,-377 222,-371 222,-371 222,-353 222,-353 222,-347 228,-341 234,-341 234,-341 351,-341 351,-341 357,-341 363,-347 363,-353 363,-353 363,-371 363,-371 363,-377 357,-383 351,-383"/>
+<text text-anchor="middle" x="292.5" y="-365.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">创建版本化 Regimen</text>
+<text text-anchor="middle" x="292.5" y="-353.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">仅确认的用法建立计划</text>
+</g>
+<!-- en_risk -->
+<g id="en_risk" class="node">
+<title>en_risk</title>
+<path fill="#fff1df" stroke="#b66c12" stroke-width="1.15" d="M346.5,-300C346.5,-300 238.5,-300 238.5,-300 232.5,-300 226.5,-294 226.5,-288 226.5,-288 226.5,-270 226.5,-270 226.5,-264 232.5,-258 238.5,-258 238.5,-258 346.5,-258 346.5,-258 352.5,-258 358.5,-264 358.5,-270 358.5,-270 358.5,-288 358.5,-288 358.5,-294 352.5,-300 346.5,-300"/>
+<text text-anchor="middle" x="292.5" y="-282.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">结构化用药清单筛查</text>
+<text text-anchor="middle" x="292.5" y="-270.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">重复成分 · 潜在 DDI</text>
+</g>
+<!-- en_photo -->
+<g id="en_photo" class="node">
+<title>en_photo</title>
+<path fill="#eaf2ff" stroke="#2b5b9b" stroke-width="1.15" d="M343,-217C343,-217 242,-217 242,-217 236,-217 230,-211 230,-205 230,-205 230,-187 230,-187 230,-181 236,-175 242,-175 242,-175 343,-175 343,-175 349,-175 355,-181 355,-187 355,-187 355,-205 355,-205 355,-211 349,-217 343,-217"/>
+<text text-anchor="middle" x="292.5" y="-199.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">选择参考形式</text>
+<text text-anchor="middle" x="292.5" y="-187.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">药盒 / 铝塑板 / 裸片</text>
+</g>
+<!-- en_pack -->
+<g id="en_pack" class="node">
+<title>en_pack</title>
+<path fill="#f4f6f9" stroke="#536178" stroke-width="1.15" d="M153,-125C153,-125 12,-125 12,-125 6,-125 0,-119 0,-113 0,-113 0,-95 0,-95 0,-89 6,-83 12,-83 12,-83 153,-83 153,-83 159,-83 165,-89 165,-95 165,-95 165,-113 165,-113 165,-119 159,-125 153,-125"/>
+<text text-anchor="middle" x="82.5" y="-107.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">保存包装参考图</text>
+<text text-anchor="middle" x="82.5" y="-95.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Box / Printed / Clear Blister</text>
+</g>
+<!-- en_embed -->
+<g id="en_embed" class="node">
+<title>en_embed</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M381,-125C381,-125 204,-125 204,-125 198,-125 192,-119 192,-113 192,-113 192,-95 192,-95 192,-89 198,-83 204,-83 204,-83 381,-83 381,-83 387,-83 393,-89 393,-95 393,-95 393,-113 393,-113 393,-119 387,-125 381,-125"/>
+<text text-anchor="middle" x="292.5" y="-107.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">裸片参考</text>
+<text text-anchor="middle" x="292.5" y="-95.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">/crop → /v1/embed → vector(256)</text>
+</g>
+<!-- en_activate -->
+<g id="en_activate" class="node">
+<title>en_activate</title>
+<path fill="#e6f5ec" stroke="#2e8058" stroke-width="1.15" d="M356.5,-42C356.5,-42 228.5,-42 228.5,-42 222.5,-42 216.5,-36 216.5,-30 216.5,-30 216.5,-12 216.5,-12 216.5,-6 222.5,0 228.5,0 228.5,0 356.5,0 356.5,0 362.5,0 368.5,-6 368.5,-12 368.5,-12 368.5,-30 368.5,-30 368.5,-36 362.5,-42 356.5,-42"/>
+<text text-anchor="middle" x="292.5" y="-24.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">完成建档</text>
+<text text-anchor="middle" x="292.5" y="-12.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">设置提醒 + 保存变更日志</text>
+</g>
+</g>
+</svg></div></div></section><section class="flow-section" id="panel-dose"><div class="section-intro"><div class="kicker">FLOW 03</div><h2>Daily Dose</h2><p>每次服药验证与事件记录。点击流程中的任何节点，可查看责任归属、工具、证据和实现状态。</p></div><div class="graph-toolbar"><span class="graph-tip">拖动滚动区查看完整流程；图可缩放</span><div class="controls"><button class="zoom-out" aria-label="Zoom out">−</button><button class="zoom-reset">重置</button><button class="zoom-in" aria-label="Zoom in">+</button></div></div><div class="graph-scroll"><div class="graph-stage"><svg width="100%" height="auto"
+ viewBox="0.00 0.00 664.20 1059.20" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(21.6 1037.6)">
+<title>G</title>
+<!-- ds_start&#45;&gt;ds_context -->
+<g id="edge1" class="edge">
+<title>ds_start&#45;&gt;ds_context</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M148,-979.69C148,-969.73 148,-957 148,-945.77"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="150.28,-945.52 148,-939.02 145.73,-945.52 150.28,-945.52"/>
+</g>
+<!-- ds_context&#45;&gt;ds_no_photo -->
+<g id="edge2" class="edge">
+<title>ds_context&#45;&gt;ds_no_photo</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M138.44,-896.82C125.58,-869.67 102.7,-821.37 88.49,-791.38"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="90.44,-790.17 85.6,-785.27 86.33,-792.12 90.44,-790.17"/>
+<text text-anchor="middle" x="143" y="-869.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">无照片</text>
+</g>
+<!-- ds_context&#45;&gt;ds_route -->
+<g id="edge3" class="edge">
+<title>ds_context&#45;&gt;ds_route</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M174.48,-896.8C192.09,-883.37 215.33,-865.65 233.98,-851.42"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="235.82,-852.88 239.61,-847.13 233.06,-849.26 235.82,-852.88"/>
+<text text-anchor="middle" x="225" y="-869.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">有照片</text>
+</g>
+<!-- ds_no_photo&#45;&gt;ds_save -->
+<g id="edge4" class="edge">
+<title>ds_no_photo&#45;&gt;ds_save</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M74.51,-742.85C71.96,-708.2 67,-641 67,-641 67,-641 67,-641 67,-103 67,-103 73.1,-72.09 77.77,-48.46"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="80.02,-48.84 79.04,-42.02 75.55,-47.96 80.02,-48.84"/>
+</g>
+<!-- ds_route&#45;&gt;ds_crop -->
+<g id="edge5" class="edge">
+<title>ds_route&#45;&gt;ds_crop</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M278.38,-804.85C291.2,-784.02 311.24,-751.4 325.19,-728.72"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="327.13,-729.9 328.6,-723.18 323.25,-727.52 327.13,-729.9"/>
+<text text-anchor="middle" x="324.5" y="-761.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">裸片</text>
+</g>
+<!-- ds_route&#45;&gt;ds_ocr -->
+<g id="edge6" class="edge">
+<title>ds_route&#45;&gt;ds_ocr</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M256.63,-804.96C240.99,-771.5 209.58,-704.28 192.22,-667.15"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="194.17,-665.94 189.36,-661.02 190.05,-667.87 194.17,-665.94"/>
+<text text-anchor="middle" x="264.5" y="-761.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">有字包装</text>
+</g>
+<!-- ds_route&#45;&gt;ds_blister -->
+<g id="edge7" class="edge">
+<title>ds_route&#45;&gt;ds_blister</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M303,-805C321.5,-795 340,-785 340,-785 340,-785 434,-723 434,-723 434,-723 472,-661 472,-661 472,-661 511.41,-584.32 532.71,-542.87"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="534.76,-543.84 535.71,-537.02 530.72,-541.76 534.76,-543.84"/>
+<text text-anchor="middle" x="482" y="-699.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">无字铝塑板</text>
+</g>
+<!-- ds_crop&#45;&gt;ds_gallery -->
+<g id="edge8" class="edge">
+<title>ds_crop&#45;&gt;ds_gallery</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M341,-680.85C341,-660.37 341,-628.51 341,-605.88"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="343.28,-605.68 341,-599.18 338.73,-605.68 343.28,-605.68"/>
+</g>
+<!-- ds_crop&#45;&gt;ds_retake -->
+<g id="edge9" class="edge">
+<title>ds_crop&#45;&gt;ds_retake</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M359.33,-680.85C390.86,-646.2 452,-579 452,-579 452,-579 452,-579 452,-370 452,-370 443.06,-333.44 436.58,-306.92"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="438.75,-306.2 434.99,-300.42 434.33,-307.28 438.75,-306.2"/>
+<text text-anchor="middle" x="472" y="-451.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">重叠/不清</text>
+</g>
+<!-- ds_gallery&#45;&gt;ds_catalogue -->
+<g id="edge10" class="edge">
+<title>ds_gallery&#45;&gt;ds_catalogue</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M316.5,-557C304.25,-547 292,-537 292,-537 292,-537 269.69,-504.9 252.99,-480.87"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="254.67,-479.31 249.09,-475.27 250.93,-481.91 254.67,-479.31"/>
+<text text-anchor="middle" x="316.5" y="-513.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">未知/不一致</text>
+</g>
+<!-- ds_gallery&#45;&gt;ds_policy -->
+<g id="edge11" class="edge">
+<title>ds_gallery&#45;&gt;ds_policy</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M342,-557C342.5,-547 343,-537 343,-537 343,-537 343,-495 343,-495 343,-495 320,-433 320,-433 320,-433 298.63,-413.83 279.85,-396.98"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="281,-394.96 274.64,-392.31 277.96,-398.35 281,-394.96"/>
+<text text-anchor="middle" x="353.5" y="-451.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">可用证据</text>
+</g>
+<!-- ds_catalogue&#45;&gt;ds_policy -->
+<g id="edge12" class="edge">
+<title>ds_catalogue&#45;&gt;ds_policy</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M239.2,-432.98C241.39,-422.56 244.09,-409.69 246.45,-398.46"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="248.68,-398.9 247.79,-392.07 244.23,-397.97 248.68,-398.9"/>
+</g>
+<!-- ds_ocr&#45;&gt;ds_policy -->
+<g id="edge13" class="edge">
+<title>ds_ocr&#45;&gt;ds_policy</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M176.2,-618.89C167.92,-575.1 149,-475 149,-475 149,-475 149,-433 149,-433 149,-433 183.27,-412.71 212.27,-395.53"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="213.55,-397.41 217.99,-392.14 211.24,-393.5 213.55,-397.41"/>
+</g>
+<!-- ds_blister&#45;&gt;ds_retake -->
+<g id="edge14" class="edge">
+<title>ds_blister&#45;&gt;ds_retake</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M538.36,-494.87C519.45,-445.04 472,-320 472,-320 472,-320 464.52,-312.88 455.88,-304.65"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="457.28,-302.84 451,-300 454.14,-306.13 457.28,-302.84"/>
+</g>
+<!-- ds_policy&#45;&gt;ds_retake -->
+<g id="edge15" class="edge">
+<title>ds_policy&#45;&gt;ds_retake</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M291.95,-349.8C319.32,-335.96 355.68,-317.58 384.22,-303.15"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="385.41,-305.09 390.19,-300.13 383.36,-301.03 385.41,-305.09"/>
+<text text-anchor="middle" x="366" y="-322.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">未知/冲突</text>
+</g>
+<!-- ds_policy&#45;&gt;ds_explain -->
+<g id="edge16" class="edge">
+<title>ds_policy&#45;&gt;ds_explain</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M252,-349.83C252,-316.89 252,-251.57 252,-214.78"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="254.28,-214.76 252,-208.26 249.73,-214.76 254.28,-214.76"/>
+<text text-anchor="middle" x="275" y="-276.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">证据可解释</text>
+</g>
+<!-- ds_retake&#45;&gt;ds_explain -->
+<g id="edge17" class="edge">
+<title>ds_retake&#45;&gt;ds_explain</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M390.05,-257.8C362.68,-243.96 326.32,-225.58 297.78,-211.15"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="298.64,-209.03 291.81,-208.13 296.59,-213.09 298.64,-209.03"/>
+<text text-anchor="middle" x="364.5" y="-230.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">明确限制</text>
+</g>
+<!-- ds_explain&#45;&gt;ds_confirm -->
+<g id="edge18" class="edge">
+<title>ds_explain&#45;&gt;ds_confirm</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M242.11,-165.98C236.92,-155.46 230.49,-142.45 224.91,-131.15"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="226.83,-129.89 221.91,-125.07 222.75,-131.91 226.83,-129.89"/>
+</g>
+<!-- ds_confirm&#45;&gt;ds_save -->
+<g id="edge19" class="edge">
+<title>ds_confirm&#45;&gt;ds_save</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M180.11,-82.98C162.13,-71.68 139.55,-57.51 120.69,-45.67"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="121.68,-43.6 114.97,-42.07 119.26,-47.46 121.68,-43.6"/>
+</g>
+<!-- ds_start -->
+<g id="ds_start" class="node">
+<title>ds_start</title>
+<path fill="#eaf2ff" stroke="#2b5b9b" stroke-width="1.15" d="M211,-1016C211,-1016 85,-1016 85,-1016 79,-1016 73,-1010 73,-1004 73,-1004 73,-992 73,-992 73,-986 79,-980 85,-980 85,-980 211,-980 211,-980 217,-980 223,-986 223,-992 223,-992 223,-1004 223,-1004 223,-1010 217,-1016 211,-1016"/>
+<text text-anchor="middle" x="148" y="-995.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">服药提醒 / 患者主动发起</text>
+</g>
+<!-- ds_context -->
+<g id="ds_context" class="node">
+<title>ds_context</title>
+<path fill="#f4f6f9" stroke="#536178" stroke-width="1.15" d="M221,-939C221,-939 75,-939 75,-939 69,-939 63,-933 63,-927 63,-927 63,-909 63,-909 63,-903 69,-897 75,-897 75,-897 221,-897 221,-897 227,-897 233,-903 233,-909 233,-909 233,-927 233,-927 233,-933 227,-939 221,-939"/>
+<text text-anchor="middle" x="148" y="-921.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">读取 Active Regimen</text>
+<text text-anchor="middle" x="148" y="-909.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">当前剂量 + 历史 Dose Events</text>
+</g>
+<!-- ds_no_photo -->
+<g id="ds_no_photo" class="node">
+<title>ds_no_photo</title>
+<path fill="#fdf4de" stroke="#97640a" stroke-width="1.15" d="M123.5,-785C123.5,-785 28.5,-785 28.5,-785 22.5,-785 16.5,-779 16.5,-773 16.5,-773 16.5,-755 16.5,-755 16.5,-749 22.5,-743 28.5,-743 28.5,-743 123.5,-743 123.5,-743 129.5,-743 135.5,-749 135.5,-755 135.5,-755 135.5,-773 135.5,-773 135.5,-779 129.5,-785 123.5,-785"/>
+<text text-anchor="middle" x="76" y="-767.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">不拍照：自述服药</text>
+<text text-anchor="middle" x="76" y="-755.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">未进行视觉核对</text>
+</g>
+<!-- ds_route -->
+<g id="ds_route" class="node">
+<title>ds_route</title>
+<path fill="#e7f5f2" stroke="#147d72" stroke-width="1.15" d="M340,-847C340,-847 192,-847 192,-847 186,-847 180,-841 180,-835 180,-835 180,-817 180,-817 180,-811 186,-805 192,-805 192,-805 340,-805 340,-805 346,-805 352,-811 352,-817 352,-817 352,-835 352,-835 352,-841 346,-847 340,-847"/>
+<text text-anchor="middle" x="266" y="-829.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">有照片 → 识别输入类型</text>
+<text text-anchor="middle" x="266" y="-817.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">裸片 / 有字包装 / 无字 Blister</text>
+</g>
+<!-- ds_crop -->
+<g id="ds_crop" class="node">
+<title>ds_crop</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M408.5,-723C408.5,-723 273.5,-723 273.5,-723 267.5,-723 261.5,-717 261.5,-711 261.5,-711 261.5,-693 261.5,-693 261.5,-687 267.5,-681 273.5,-681 273.5,-681 408.5,-681 408.5,-681 414.5,-681 420.5,-687 420.5,-693 420.5,-693 420.5,-711 420.5,-711 420.5,-717 414.5,-723 408.5,-723"/>
+<text text-anchor="middle" x="341" y="-705.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">裸片：单颗手动 Crop 优先</text>
+<text text-anchor="middle" x="341" y="-693.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">多颗需正确 boxes</text>
+</g>
+<!-- ds_gallery -->
+<g id="ds_gallery" class="node">
+<title>ds_gallery</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M389.5,-599C389.5,-599 292.5,-599 292.5,-599 286.5,-599 280.5,-593 280.5,-587 280.5,-587 280.5,-569 280.5,-569 280.5,-563 286.5,-557 292.5,-557 292.5,-557 389.5,-557 389.5,-557 395.5,-557 401.5,-563 401.5,-569 401.5,-569 401.5,-587 401.5,-587 401.5,-593 395.5,-599 389.5,-599"/>
+<text text-anchor="middle" x="341" y="-581.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">个人裸片图库</text>
+<text text-anchor="middle" x="341" y="-569.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">/embed → /match</text>
+</g>
+<!-- ds_catalogue -->
+<g id="ds_catalogue" class="node">
+<title>ds_catalogue</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M295,-475C295,-475 175,-475 175,-475 169,-475 163,-469 163,-463 163,-463 163,-445 163,-445 163,-439 169,-433 175,-433 175,-433 295,-433 295,-433 301,-433 307,-439 307,-445 307,-445 307,-463 307,-463 307,-469 301,-475 295,-475"/>
+<text text-anchor="middle" x="235" y="-457.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">目录候选辅助检索</text>
+<text text-anchor="middle" x="235" y="-445.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">/identify + 刻印/正反面</text>
+</g>
+<!-- ds_ocr -->
+<g id="ds_ocr" class="node">
+<title>ds_ocr</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M238.5,-661C238.5,-661 121.5,-661 121.5,-661 115.5,-661 109.5,-655 109.5,-649 109.5,-649 109.5,-631 109.5,-631 109.5,-625 115.5,-619 121.5,-619 121.5,-619 238.5,-619 238.5,-619 244.5,-619 250.5,-625 250.5,-631 250.5,-631 250.5,-649 250.5,-649 250.5,-655 244.5,-661 238.5,-661"/>
+<text text-anchor="middle" x="180" y="-643.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">有字包装：OCR 提取</text>
+<text text-anchor="middle" x="180" y="-631.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">匹配产品、规格、剂型</text>
+</g>
+<!-- ds_blister -->
+<g id="ds_blister" class="node">
+<title>ds_blister</title>
+<path fill="#fff0ed" stroke="#b85646" stroke-width="1.15" d="M609,-537C609,-537 483,-537 483,-537 477,-537 471,-531 471,-525 471,-525 471,-507 471,-507 471,-501 477,-495 483,-495 483,-495 609,-495 609,-495 615,-495 621,-501 621,-507 621,-507 621,-525 621,-525 621,-531 615,-537 609,-537"/>
+<text text-anchor="middle" x="546" y="-519.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">无字 Blister</text>
+<text text-anchor="middle" x="546" y="-507.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">寻找药盒/药袋/原始记录</text>
+</g>
+<!-- ds_policy -->
+<g id="ds_policy" class="node">
+<title>ds_policy</title>
+<path fill="#fff1df" stroke="#b66c12" stroke-width="1.15" d="M344.5,-392C344.5,-392 159.5,-392 159.5,-392 153.5,-392 147.5,-386 147.5,-380 147.5,-380 147.5,-362 147.5,-362 147.5,-356 153.5,-350 159.5,-350 159.5,-350 344.5,-350 344.5,-350 350.5,-350 356.5,-356 356.5,-362 356.5,-362 356.5,-380 356.5,-380 356.5,-386 350.5,-392 344.5,-392"/>
+<text text-anchor="middle" x="252" y="-374.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Evidence + Regimen Gate</text>
+<text text-anchor="middle" x="252" y="-362.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">身份、外观、时间、剂量、重复风险</text>
+</g>
+<!-- ds_retake -->
+<g id="ds_retake" class="node">
+<title>ds_retake</title>
+<path fill="#fff0ed" stroke="#b85646" stroke-width="1.15" d="M516.5,-300C516.5,-300 343.5,-300 343.5,-300 337.5,-300 331.5,-294 331.5,-288 331.5,-288 331.5,-270 331.5,-270 331.5,-264 337.5,-258 343.5,-258 343.5,-258 516.5,-258 516.5,-258 522.5,-258 528.5,-264 528.5,-270 528.5,-270 528.5,-288 528.5,-288 528.5,-294 522.5,-300 516.5,-300"/>
+<text text-anchor="middle" x="430" y="-282.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">证据不足 / 重拍</text>
+<text text-anchor="middle" x="430" y="-270.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">换角度、查标签、必要时人工咨询</text>
+</g>
+<!-- ds_explain -->
+<g id="ds_explain" class="node">
+<title>ds_explain</title>
+<path fill="#e7f5f2" stroke="#147d72" stroke-width="1.15" d="M344.5,-208C344.5,-208 159.5,-208 159.5,-208 153.5,-208 147.5,-202 147.5,-196 147.5,-196 147.5,-178 147.5,-178 147.5,-172 153.5,-166 159.5,-166 159.5,-166 344.5,-166 344.5,-166 350.5,-166 356.5,-172 356.5,-178 356.5,-178 356.5,-196 356.5,-196 356.5,-202 350.5,-208 344.5,-208"/>
+<text text-anchor="middle" x="252" y="-190.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">结果解释</text>
+<text text-anchor="middle" x="252" y="-178.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">“外观符合记录”≠“安全可服用”</text>
+</g>
+<!-- ds_confirm -->
+<g id="ds_confirm" class="node">
+<title>ds_confirm</title>
+<path fill="#fdf4de" stroke="#97640a" stroke-width="1.15" d="M282,-125C282,-125 142,-125 142,-125 136,-125 130,-119 130,-113 130,-113 130,-95 130,-95 130,-89 136,-83 142,-83 142,-83 282,-83 282,-83 288,-83 294,-89 294,-95 294,-95 294,-113 294,-113 294,-119 288,-125 282,-125"/>
+<text text-anchor="middle" x="212" y="-107.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">用户确认真实发生了什么</text>
+<text text-anchor="middle" x="212" y="-95.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">taken / not_taken / unsure</text>
+</g>
+<!-- ds_save -->
+<g id="ds_save" class="node">
+<title>ds_save</title>
+<path fill="#e6f5ec" stroke="#2e8058" stroke-width="1.15" d="M154,-42C154,-42 12,-42 12,-42 6,-42 0,-36 0,-30 0,-30 0,-12 0,-12 0,-6 6,0 12,0 12,0 154,0 154,0 160,0 166,-6 166,-12 166,-12 166,-30 166,-30 166,-36 160,-42 154,-42"/>
+<text text-anchor="middle" x="83" y="-24.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">写入 Dose Event + 下次追踪</text>
+<text text-anchor="middle" x="83" y="-12.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">需要时通知授权 Caregiver</text>
+</g>
+</g>
+</svg></div></div></section><section class="flow-section" id="panel-unknown"><div class="section-intro"><div class="kicker">FLOW 04</div><h2>Unknown Item</h2><p>未知药片 / 包装识别。点击流程中的任何节点，可查看责任归属、工具、证据和实现状态。</p></div><div class="graph-toolbar"><span class="graph-tip">拖动滚动区查看完整流程；图可缩放</span><div class="controls"><button class="zoom-out" aria-label="Zoom out">−</button><button class="zoom-reset">重置</button><button class="zoom-in" aria-label="Zoom in">+</button></div></div><div class="graph-scroll"><div class="graph-stage"><svg width="100%" height="auto"
+ viewBox="0.00 0.00 469.70 532.20" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(21.6 510.6)">
+<title>G</title>
+<!-- un_start&#45;&gt;un_route -->
+<g id="edge1" class="edge">
+<title>un_start&#45;&gt;un_route</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M265,-452.98C265,-442.89 265,-429.94 265,-418.84"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="267.28,-418.71 265,-412.21 262.73,-418.71 267.28,-418.71"/>
+</g>
+<!-- un_route&#45;&gt;un_loose -->
+<g id="edge2" class="edge">
+<title>un_route&#45;&gt;un_loose</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M229.83,-375.81C202.38,-362.39 163.99,-343.63 133.92,-328.93"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="134.86,-326.86 128.02,-326.05 132.86,-330.95 134.86,-326.86"/>
+<text text-anchor="middle" x="196.5" y="-348.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">裸片</text>
+</g>
+<!-- un_route&#45;&gt;un_print -->
+<g id="edge3" class="edge">
+<title>un_route&#45;&gt;un_print</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M265,-375.81C265,-363.56 265,-346.84 265,-332.83"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="267.28,-332.71 265,-326.21 262.73,-332.71 267.28,-332.71"/>
+<text text-anchor="middle" x="283.5" y="-348.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">有字包装</text>
+</g>
+<!-- un_route&#45;&gt;un_blank -->
+<g id="edge4" class="edge">
+<title>un_route&#45;&gt;un_blank</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M285.09,-375.75C308.2,-355.89 343,-326 343,-326 343,-326 353.39,-294.44 361.28,-270.48"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="363.45,-271.16 363.33,-264.27 359.13,-269.73 363.45,-271.16"/>
+<text text-anchor="middle" x="327.5" y="-348.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">无字</text>
+</g>
+<!-- un_loose&#45;&gt;un_candidates -->
+<g id="edge5" class="edge">
+<title>un_loose&#45;&gt;un_candidates</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M115.4,-283.85C145.53,-262.49 193.11,-228.74 225.16,-206.01"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="226.57,-207.79 230.56,-202.18 223.94,-204.08 226.57,-207.79"/>
+</g>
+<!-- un_print&#45;&gt;un_candidates -->
+<g id="edge6" class="edge">
+<title>un_print&#45;&gt;un_candidates</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M264.01,-283.85C263,-263.37 261.43,-231.51 260.32,-208.88"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="262.58,-208.56 259.99,-202.18 258.04,-208.78 262.58,-208.56"/>
+</g>
+<!-- un_blank&#45;&gt;un_more -->
+<g id="edge7" class="edge">
+<title>un_blank&#45;&gt;un_more</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M363.33,-221.73C355.33,-197.45 343,-160 343,-160 343,-160 333.56,-141.12 325.45,-124.9"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="327.49,-123.88 322.54,-119.09 323.42,-125.92 327.49,-123.88"/>
+</g>
+<!-- un_candidates&#45;&gt;un_more -->
+<g id="edge8" class="edge">
+<title>un_candidates&#45;&gt;un_more</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M273.16,-159.91C280.75,-149.15 290.13,-135.85 297.98,-124.71"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="300.05,-125.73 301.93,-119.11 296.33,-123.11 300.05,-125.73"/>
+</g>
+<!-- un_more&#45;&gt;un_save -->
+<g id="edge9" class="edge">
+<title>un_more&#45;&gt;un_save</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M314,-82.69C314,-72.73 314,-60 314,-48.77"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="316.28,-48.52 314,-42.02 311.73,-48.52 316.28,-48.52"/>
+</g>
+<!-- un_start -->
+<g id="un_start" class="node">
+<title>un_start</title>
+<path fill="#eaf2ff" stroke="#2b5b9b" stroke-width="1.15" d="M318,-489C318,-489 212,-489 212,-489 206,-489 200,-483 200,-477 200,-477 200,-465 200,-465 200,-459 206,-453 212,-453 212,-453 318,-453 318,-453 324,-453 330,-459 330,-465 330,-465 330,-477 330,-477 330,-483 324,-489 318,-489"/>
+<text text-anchor="middle" x="265" y="-468.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">用户：这是什么药？</text>
+</g>
+<!-- un_route -->
+<g id="un_route" class="node">
+<title>un_route</title>
+<path fill="#e7f5f2" stroke="#147d72" stroke-width="1.15" d="M318,-412C318,-412 212,-412 212,-412 206,-412 200,-406 200,-400 200,-400 200,-388 200,-388 200,-382 206,-376 212,-376 212,-376 318,-376 318,-376 324,-376 330,-382 330,-388 330,-388 330,-400 330,-400 330,-406 324,-412 318,-412"/>
+<text text-anchor="middle" x="265" y="-391.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">识别形态与来源信息</text>
+</g>
+<!-- un_loose -->
+<g id="un_loose" class="node">
+<title>un_loose</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M162,-326C162,-326 12,-326 12,-326 6,-326 0,-320 0,-314 0,-314 0,-296 0,-296 0,-290 6,-284 12,-284 12,-284 162,-284 162,-284 168,-284 174,-290 174,-296 174,-296 174,-314 174,-314 174,-320 168,-326 162,-326"/>
+<text text-anchor="middle" x="87" y="-308.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">裸片 1–2 张</text>
+<text text-anchor="middle" x="87" y="-296.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">识别 imprint / shape / colour</text>
+</g>
+<!-- un_print -->
+<g id="un_print" class="node">
+<title>un_print</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M317,-326C317,-326 213,-326 213,-326 207,-326 201,-320 201,-314 201,-314 201,-296 201,-296 201,-290 207,-284 213,-284 213,-284 317,-284 317,-284 323,-284 329,-290 329,-296 329,-296 329,-314 329,-314 329,-320 323,-326 317,-326"/>
+<text text-anchor="middle" x="265" y="-308.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">有字包装</text>
+<text text-anchor="middle" x="265" y="-296.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">OCR + 产品字段查询</text>
+</g>
+<!-- un_blank -->
+<g id="un_blank" class="node">
+<title>un_blank</title>
+<path fill="#fff0ed" stroke="#b85646" stroke-width="1.15" d="M414.5,-264C414.5,-264 325.5,-264 325.5,-264 319.5,-264 313.5,-258 313.5,-252 313.5,-252 313.5,-234 313.5,-234 313.5,-228 319.5,-222 325.5,-222 325.5,-222 414.5,-222 414.5,-222 420.5,-222 426.5,-228 426.5,-234 426.5,-234 426.5,-252 426.5,-252 426.5,-258 420.5,-264 414.5,-264"/>
+<text text-anchor="middle" x="370" y="-246.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">无字/遮挡 Blister</text>
+<text text-anchor="middle" x="370" y="-234.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">无法可靠判断</text>
+</g>
+<!-- un_candidates -->
+<g id="un_candidates" class="node">
+<title>un_candidates</title>
+<path fill="#fff1df" stroke="#b66c12" stroke-width="1.15" d="M317,-202C317,-202 201,-202 201,-202 195,-202 189,-196 189,-190 189,-190 189,-172 189,-172 189,-166 195,-160 201,-160 201,-160 317,-160 317,-160 323,-160 329,-166 329,-172 329,-172 329,-190 329,-190 329,-196 323,-202 317,-202"/>
+<text text-anchor="middle" x="259" y="-184.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">呈现 Possible Matches</text>
+<text text-anchor="middle" x="259" y="-172.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">排名 + 已知限制</text>
+</g>
+<!-- un_more -->
+<g id="un_more" class="node">
+<title>un_more</title>
+<path fill="#fdf4de" stroke="#97640a" stroke-width="1.15" d="M400.5,-119C400.5,-119 227.5,-119 227.5,-119 221.5,-119 215.5,-113 215.5,-107 215.5,-107 215.5,-95 215.5,-95 215.5,-89 221.5,-83 227.5,-83 227.5,-83 400.5,-83 400.5,-83 406.5,-83 412.5,-89 412.5,-95 412.5,-95 412.5,-107 412.5,-107 412.5,-113 406.5,-119 400.5,-119"/>
+<text text-anchor="middle" x="314" y="-98.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">下一步：补图、找包装、问药剂师</text>
+</g>
+<!-- un_save -->
+<g id="un_save" class="node">
+<title>un_save</title>
+<path fill="#f4f6f9" stroke="#536178" stroke-width="1.15" d="M384,-42C384,-42 244,-42 244,-42 238,-42 232,-36 232,-30 232,-30 232,-12 232,-12 232,-6 238,0 244,0 244,0 384,0 384,0 390,0 396,-6 396,-12 396,-12 396,-30 396,-30 396,-36 390,-42 384,-42"/>
+<text text-anchor="middle" x="314" y="-24.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">结束/保存未核实记录</text>
+<text text-anchor="middle" x="314" y="-12.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">不自动建立 Verified Gallery</text>
+</g>
+</g>
+</svg></div></div></section><section class="flow-section" id="panel-longitudinal"><div class="section-intro"><div class="kicker">FLOW 05</div><h2>Long-term Care</h2><p>长期依从、健康追踪与复诊准备。点击流程中的任何节点，可查看责任归属、工具、证据和实现状态。</p></div><div class="graph-toolbar"><span class="graph-tip">拖动滚动区查看完整流程；图可缩放</span><div class="controls"><button class="zoom-out" aria-label="Zoom out">−</button><button class="zoom-reset">重置</button><button class="zoom-in" aria-label="Zoom in">+</button></div></div><div class="graph-scroll"><div class="graph-stage"><svg width="100%" height="auto"
+ viewBox="0.00 0.00 432.20 618.20" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(21.6 596.6)">
+<title>G</title>
+<!-- lg_trigger&#45;&gt;lg_load -->
+<g id="edge1" class="edge">
+<title>lg_trigger&#45;&gt;lg_load</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M280.5,-538.69C280.5,-528.73 280.5,-516 280.5,-504.77"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="282.78,-504.52 280.5,-498.02 278.23,-504.52 282.78,-504.52"/>
+</g>
+<!-- lg_load&#45;&gt;lg_trend -->
+<g id="edge2" class="edge">
+<title>lg_load&#45;&gt;lg_trend</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M265.42,-455.98C257.36,-445.27 247.34,-431.97 238.72,-420.52"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="240.34,-418.9 234.62,-415.07 236.71,-421.63 240.34,-418.9"/>
+</g>
+<!-- lg_trend&#45;&gt;lg_barrier -->
+<g id="edge3" class="edge">
+<title>lg_trend&#45;&gt;lg_barrier</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M187.37,-372.98C169.24,-361.68 146.49,-347.51 127.48,-335.67"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="128.44,-333.58 121.72,-332.07 126.03,-337.44 128.44,-333.58"/>
+</g>
+<!-- lg_trend&#45;&gt;lg_tasks -->
+<g id="edge4" class="edge">
+<title>lg_trend&#45;&gt;lg_tasks</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M219.36,-372.81C219.18,-347.69 218.88,-304.7 218.69,-276.82"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="220.96,-276.57 218.64,-270.08 216.41,-276.6 220.96,-276.57"/>
+</g>
+<!-- lg_barrier&#45;&gt;lg_knowledge -->
+<g id="edge5" class="edge">
+<title>lg_barrier&#45;&gt;lg_knowledge</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M91.81,-289.85C94.16,-269.37 97.82,-237.51 100.42,-214.88"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="102.7,-214.89 101.18,-208.18 98.18,-214.37 102.7,-214.89"/>
+</g>
+<!-- lg_tasks&#45;&gt;lg_summary -->
+<g id="edge6" class="edge">
+<title>lg_tasks&#45;&gt;lg_summary</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M215.82,-227.81C212.48,-202.69 206.77,-159.7 203.06,-131.82"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="205.28,-131.23 202.17,-125.08 200.77,-131.83 205.28,-131.23"/>
+</g>
+<!-- lg_knowledge&#45;&gt;lg_summary -->
+<g id="edge7" class="edge">
+<title>lg_knowledge&#45;&gt;lg_summary</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M127.23,-165.98C140.38,-154.88 156.84,-141 170.72,-129.28"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="172.21,-131 175.71,-125.07 169.27,-127.53 172.21,-131"/>
+</g>
+<!-- lg_summary&#45;&gt;lg_followup -->
+<g id="edge8" class="edge">
+<title>lg_summary&#45;&gt;lg_followup</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M217.05,-82.98C226.52,-72.17 238.31,-58.72 248.4,-47.21"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="250.33,-48.46 252.91,-42.07 246.91,-45.46 250.33,-48.46"/>
+</g>
+<!-- lg_followup&#45;&gt;lg_load -->
+<g id="edge9" class="edge">
+<title>lg_followup&#45;&gt;lg_load</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M288.3,-42.02C309.62,-66.01 342.5,-103 342.5,-103 342.5,-395 342.5,-395 342.5,-395 342.5,-395 318.03,-426.97 299.83,-450.74"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="297.97,-449.43 295.83,-455.98 301.58,-452.2 297.97,-449.43"/>
+<text text-anchor="middle" x="361" y="-246.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">下次会话</text>
+</g>
+<!-- lg_trigger -->
+<g id="lg_trigger" class="node">
+<title>lg_trigger</title>
+<path fill="#eaf2ff" stroke="#2b5b9b" stroke-width="1.15" d="M377,-575C377,-575 184,-575 184,-575 178,-575 172,-569 172,-563 172,-563 172,-551 172,-551 172,-545 178,-539 184,-539 184,-539 377,-539 377,-539 383,-539 389,-545 389,-551 389,-551 389,-563 389,-563 389,-569 383,-575 377,-575"/>
+<text text-anchor="middle" x="280.5" y="-554.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">定时提醒 / 后续对话 / Health Check&#45;in</text>
+</g>
+<!-- lg_load -->
+<g id="lg_load" class="node">
+<title>lg_load</title>
+<path fill="#f4f6f9" stroke="#536178" stroke-width="1.15" d="M361.5,-498C361.5,-498 199.5,-498 199.5,-498 193.5,-498 187.5,-492 187.5,-486 187.5,-486 187.5,-468 187.5,-468 187.5,-462 193.5,-456 199.5,-456 199.5,-456 361.5,-456 361.5,-456 367.5,-456 373.5,-462 373.5,-468 373.5,-468 373.5,-486 373.5,-486 373.5,-492 367.5,-498 361.5,-498"/>
+<text text-anchor="middle" x="280.5" y="-480.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">读取上次状态</text>
+<text text-anchor="middle" x="280.5" y="-468.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">服药事件、观察值、待办与偏好</text>
+</g>
+<!-- lg_trend -->
+<g id="lg_trend" class="node">
+<title>lg_trend</title>
+<path fill="#f4f6f9" stroke="#536178" stroke-width="1.15" d="M289.5,-415C289.5,-415 149.5,-415 149.5,-415 143.5,-415 137.5,-409 137.5,-403 137.5,-403 137.5,-385 137.5,-385 137.5,-379 143.5,-373 149.5,-373 149.5,-373 289.5,-373 289.5,-373 295.5,-373 301.5,-379 301.5,-385 301.5,-385 301.5,-403 301.5,-403 301.5,-409 295.5,-415 289.5,-415"/>
+<text text-anchor="middle" x="219.5" y="-397.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">确定性统计 + 趋势观察</text>
+<text text-anchor="middle" x="219.5" y="-385.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">未确认次数、症状、测量值</text>
+</g>
+<!-- lg_barrier -->
+<g id="lg_barrier" class="node">
+<title>lg_barrier</title>
+<path fill="#e7f5f2" stroke="#147d72" stroke-width="1.15" d="M167,-332C167,-332 12,-332 12,-332 6,-332 0,-326 0,-320 0,-320 0,-302 0,-302 0,-296 6,-290 12,-290 12,-290 167,-290 167,-290 173,-290 179,-296 179,-302 179,-302 179,-320 179,-320 179,-326 173,-332 167,-332"/>
+<text text-anchor="middle" x="89.5" y="-314.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">Agent 主动澄清障碍</text>
+<text text-anchor="middle" x="89.5" y="-302.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">忘记 / 不适 / 没有药 / 操作困难</text>
+</g>
+<!-- lg_tasks -->
+<g id="lg_tasks" class="node">
+<title>lg_tasks</title>
+<path fill="#f4f6f9" stroke="#536178" stroke-width="1.15" d="M294,-270C294,-270 143,-270 143,-270 137,-270 131,-264 131,-258 131,-258 131,-240 131,-240 131,-234 137,-228 143,-228 143,-228 294,-228 294,-228 300,-228 306,-234 306,-240 306,-240 306,-258 306,-258 306,-264 300,-270 294,-270"/>
+<text text-anchor="middle" x="218.5" y="-252.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">已有护理计划中的任务</text>
+<text text-anchor="middle" x="218.5" y="-240.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">复诊、筛查、随访、生活方式</text>
+</g>
+<!-- lg_knowledge -->
+<g id="lg_knowledge" class="node">
+<title>lg_knowledge</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M162,-208C162,-208 45,-208 45,-208 39,-208 33,-202 33,-196 33,-196 33,-178 33,-178 33,-172 39,-166 45,-166 45,-166 162,-166 162,-166 168,-166 174,-172 174,-178 174,-178 174,-196 174,-196 174,-202 168,-208 162,-208"/>
+<text text-anchor="middle" x="103.5" y="-190.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">患者友好解释 + 来源</text>
+<text text-anchor="middle" x="103.5" y="-178.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">具体用法来自原始指示</text>
+</g>
+<!-- lg_summary -->
+<g id="lg_summary" class="node">
+<title>lg_summary</title>
+<path fill="#e7f5f2" stroke="#147d72" stroke-width="1.15" d="M289,-125C289,-125 110,-125 110,-125 104,-125 98,-119 98,-113 98,-113 98,-95 98,-95 98,-89 104,-83 110,-83 110,-83 289,-83 289,-83 295,-83 301,-89 301,-95 301,-95 301,-113 301,-113 301,-119 295,-125 289,-125"/>
+<text text-anchor="middle" x="199.5" y="-107.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">生成 Medication Review Summary</text>
+<text text-anchor="middle" x="199.5" y="-95.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">时间线、疑问、未确认记录</text>
+</g>
+<!-- lg_followup -->
+<g id="lg_followup" class="node">
+<title>lg_followup</title>
+<path fill="#e6f5ec" stroke="#2e8058" stroke-width="1.15" d="M316.5,-42C316.5,-42 224.5,-42 224.5,-42 218.5,-42 212.5,-36 212.5,-30 212.5,-30 212.5,-12 212.5,-12 212.5,-6 218.5,0 224.5,0 224.5,0 316.5,0 316.5,0 322.5,0 328.5,-6 328.5,-12 328.5,-12 328.5,-30 328.5,-30 328.5,-36 322.5,-42 316.5,-42"/>
+<text text-anchor="middle" x="270.5" y="-24.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">提醒或交付摘要</text>
+<text text-anchor="middle" x="270.5" y="-12.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">用户 / 授权照护者</text>
+</g>
+</g>
+</svg></div></div></section><section class="flow-section" id="panel-agent"><div class="section-intro"><div class="kicker">FLOW 06</div><h2>Agent Loop</h2><p>Observe → Tools → Adapt → Memory。点击流程中的任何节点，可查看责任归属、工具、证据和实现状态。</p></div><div class="graph-toolbar"><span class="graph-tip">拖动滚动区查看完整流程；图可缩放</span><div class="controls"><button class="zoom-out" aria-label="Zoom out">−</button><button class="zoom-reset">重置</button><button class="zoom-in" aria-label="Zoom in">+</button></div></div><div class="graph-scroll"><div class="graph-stage"><svg width="100%" height="auto"
+ viewBox="0.00 0.00 490.20 601.20" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(21.6 579.6)">
+<title>G</title>
+<!-- ag_input&#45;&gt;ag_auth -->
+<g id="edge1" class="edge">
+<title>ag_input&#45;&gt;ag_auth</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M304.47,-515.98C293.84,-505.07 280.58,-491.48 269.29,-479.9"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="270.74,-478.14 264.58,-475.07 267.49,-481.31 270.74,-478.14"/>
+</g>
+<!-- ag_auth&#45;&gt;ag_plan -->
+<g id="edge2" class="edge">
+<title>ag_auth&#45;&gt;ag_plan</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M239.56,-432.98C236.73,-422.56 233.24,-409.69 230.19,-398.46"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="232.35,-397.75 228.45,-392.07 227.96,-398.94 232.35,-397.75"/>
+</g>
+<!-- ag_plan&#45;&gt;ag_tool -->
+<g id="edge3" class="edge">
+<title>ag_plan&#45;&gt;ag_tool</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M223,-349.98C223,-339.66 223,-326.93 223,-315.78"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="225.28,-315.57 223,-309.07 220.73,-315.57 225.28,-315.57"/>
+</g>
+<!-- ag_tool&#45;&gt;ag_evidence -->
+<g id="edge4" class="edge">
+<title>ag_tool&#45;&gt;ag_evidence</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M223,-266.58C223,-253.83 223,-237.29 223,-223.53"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="225.28,-223.53 223,-217.03 220.73,-223.53 225.28,-223.53"/>
+</g>
+<!-- ag_evidence&#45;&gt;ag_clarify -->
+<g id="edge5" class="edge">
+<title>ag_evidence&#45;&gt;ag_clarify</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M191.36,-174.8C169.95,-161.14 141.59,-143.04 119.12,-128.69"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="120.24,-126.71 113.54,-125.13 117.79,-130.55 120.24,-126.71"/>
+<text text-anchor="middle" x="175.5" y="-147.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">证据不足</text>
+</g>
+<!-- ag_evidence&#45;&gt;ag_confirm -->
+<g id="edge7" class="edge">
+<title>ag_evidence&#45;&gt;ag_confirm</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M234.12,-174.58C241.19,-161.6 250.39,-144.69 257.96,-130.78"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="259.98,-131.83 261.09,-125.03 255.99,-129.65 259.98,-131.83"/>
+<text text-anchor="middle" x="263" y="-147.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">可授权</text>
+</g>
+<!-- ag_clarify&#45;&gt;ag_plan -->
+<g id="edge6" class="edge">
+<title>ag_clarify&#45;&gt;ag_plan</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M87.08,-125.31C99.98,-176.91 133,-309 133,-309 133,-309 162.26,-328.83 187.41,-345.88"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="186.37,-347.92 193.03,-349.69 188.93,-344.16 186.37,-347.92"/>
+<text text-anchor="middle" x="136.5" y="-239.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">新上下文</text>
+</g>
+<!-- ag_confirm&#45;&gt;ag_memory -->
+<g id="edge8" class="edge">
+<title>ag_confirm&#45;&gt;ag_memory</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M287.08,-82.98C295.14,-72.27 305.16,-58.97 313.78,-47.52"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="315.79,-48.63 317.88,-42.07 312.16,-45.9 315.79,-48.63"/>
+</g>
+<!-- ag_memory&#45;&gt;ag_input -->
+<g id="edge9" class="edge">
+<title>ag_memory&#45;&gt;ag_input</title>
+<path fill="none" stroke="#a0b0bf" stroke-width="1.1" d="M348.08,-42.02C366.14,-66.01 394,-103 394,-103 394,-455 394,-455 394,-455 394,-455 366.14,-487.24 345.57,-511.04"/>
+<polygon fill="#a0b0bf" stroke="#a0b0bf" stroke-width="1.1" points="343.83,-509.57 341.3,-515.98 347.27,-512.55 343.83,-509.57"/>
+<text text-anchor="middle" x="420.5" y="-285.8" font-family="Noto Sans CJK SC" font-size="9.00" fill="#66788a">future event</text>
+</g>
+<!-- ag_input -->
+<g id="ag_input" class="node">
+<title>ag_input</title>
+<path fill="#eaf2ff" stroke="#2b5b9b" stroke-width="1.15" d="M403,-558C403,-558 245,-558 245,-558 239,-558 233,-552 233,-546 233,-546 233,-528 233,-528 233,-522 239,-516 245,-516 245,-516 403,-516 403,-516 409,-516 415,-522 415,-528 415,-528 415,-546 415,-546 415,-552 409,-558 403,-558"/>
+<text text-anchor="middle" x="324" y="-540.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">OBSERVE</text>
+<text text-anchor="middle" x="324" y="-528.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">用户输入 / 到期事件 / 工具回执</text>
+</g>
+<!-- ag_auth -->
+<g id="ag_auth" class="node">
+<title>ag_auth</title>
+<path fill="#f4f6f9" stroke="#536178" stroke-width="1.15" d="M331.5,-475C331.5,-475 158.5,-475 158.5,-475 152.5,-475 146.5,-469 146.5,-463 146.5,-463 146.5,-445 146.5,-445 146.5,-439 152.5,-433 158.5,-433 158.5,-433 331.5,-433 331.5,-433 337.5,-433 343.5,-439 343.5,-445 343.5,-445 343.5,-463 343.5,-463 343.5,-469 337.5,-475 331.5,-475"/>
+<text text-anchor="middle" x="245" y="-457.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">LOAD CONTEXT</text>
+<text text-anchor="middle" x="245" y="-445.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">身份、Regimen、会话状态、来源</text>
+</g>
+<!-- ag_plan -->
+<g id="ag_plan" class="node">
+<title>ag_plan</title>
+<path fill="#e7f5f2" stroke="#147d72" stroke-width="1.15" d="M297.5,-392C297.5,-392 148.5,-392 148.5,-392 142.5,-392 136.5,-386 136.5,-380 136.5,-380 136.5,-362 136.5,-362 136.5,-356 142.5,-350 148.5,-350 148.5,-350 297.5,-350 297.5,-350 303.5,-350 309.5,-356 309.5,-362 309.5,-362 309.5,-380 309.5,-380 309.5,-386 303.5,-392 297.5,-392"/>
+<text text-anchor="middle" x="223" y="-374.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">PLAN NEXT ACTION</text>
+<text text-anchor="middle" x="223" y="-362.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">识别意图/缺失信息/选择工具</text>
+</g>
+<!-- ag_tool -->
+<g id="ag_tool" class="node">
+<title>ag_tool</title>
+<path fill="#ecf0ff" stroke="#5955a8" stroke-width="1.15" d="M287,-309C287,-309 159,-309 159,-309 153,-309 147,-303 147,-297 147,-297 147,-279 147,-279 147,-273 153,-267 159,-267 159,-267 287,-267 287,-267 293,-267 299,-273 299,-279 299,-279 299,-297 299,-297 299,-303 293,-309 287,-309"/>
+<text text-anchor="middle" x="223" y="-291.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">EXECUTE TOOL</text>
+<text text-anchor="middle" x="223" y="-279.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">受限、类型化的工具调用</text>
+</g>
+<!-- ag_evidence -->
+<g id="ag_evidence" class="node">
+<title>ag_evidence</title>
+<path fill="#fff1df" stroke="#b66c12" stroke-width="1.15" d="M304,-217C304,-217 142,-217 142,-217 136,-217 130,-211 130,-205 130,-205 130,-187 130,-187 130,-181 136,-175 142,-175 142,-175 304,-175 304,-175 310,-175 316,-181 316,-187 316,-187 316,-205 316,-205 316,-211 310,-217 304,-217"/>
+<text text-anchor="middle" x="223" y="-199.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">EVIDENCE GATE</text>
+<text text-anchor="middle" x="223" y="-187.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">冲突、来源、可信度、任务风险</text>
+</g>
+<!-- ag_clarify -->
+<g id="ag_clarify" class="node">
+<title>ag_clarify</title>
+<path fill="#e7f5f2" stroke="#147d72" stroke-width="1.15" d="M152,-125C152,-125 12,-125 12,-125 6,-125 0,-119 0,-113 0,-113 0,-95 0,-95 0,-89 6,-83 12,-83 12,-83 152,-83 152,-83 158,-83 164,-89 164,-95 164,-95 164,-113 164,-113 164,-119 158,-125 152,-125"/>
+<text text-anchor="middle" x="82" y="-107.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">ADAPT / CLARIFY</text>
+<text text-anchor="middle" x="82" y="-95.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">换图片、追问、查其他来源</text>
+</g>
+<!-- ag_confirm -->
+<g id="ag_confirm" class="node">
+<title>ag_confirm</title>
+<path fill="#fdf4de" stroke="#97640a" stroke-width="1.15" d="M340.5,-125C340.5,-125 203.5,-125 203.5,-125 197.5,-125 191.5,-119 191.5,-113 191.5,-113 191.5,-95 191.5,-95 191.5,-89 197.5,-83 203.5,-83 203.5,-83 340.5,-83 340.5,-83 346.5,-83 352.5,-89 352.5,-95 352.5,-95 352.5,-113 352.5,-113 352.5,-119 346.5,-125 340.5,-125"/>
+<text text-anchor="middle" x="272" y="-107.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">ACT WITH CONFIRMATION</text>
+<text text-anchor="middle" x="272" y="-95.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">告知限制→确认→写事件</text>
+</g>
+<!-- ag_memory -->
+<g id="ag_memory" class="node">
+<title>ag_memory</title>
+<path fill="#e6f5ec" stroke="#2e8058" stroke-width="1.15" d="M397,-42C397,-42 269,-42 269,-42 263,-42 257,-36 257,-30 257,-30 257,-12 257,-12 257,-6 263,0 269,0 269,0 397,0 397,0 403,0 409,-6 409,-12 409,-12 409,-30 409,-30 409,-36 403,-42 397,-42"/>
+<text text-anchor="middle" x="333" y="-24.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">MEMORY + FOLLOW&#45;UP</text>
+<text text-anchor="middle" x="333" y="-12.2" font-family="Noto Sans CJK SC" font-size="11.00" fill="#17253e">保存状态、安排下次任务</text>
+</g>
+</g>
+</svg></div></div></section>
+<section class="doc-section" id="panel-api"><div class="paper"><div class="section-label">API CONTRACT · AUDIT</div><h2>PharmaScan API 决策矩阵</h2><p>基于本地保存的 OpenAPI v0.4.0 字段逐一审查。<strong>接口定义可用 ≠ 实际返回已验证</strong>；标记“新增”的接口不是已实现接口。筛选 P0 查看提交前最重要的问题。</p><div class="audit-callout"><strong>当前已知失败案例：单药被 Scan 成两个目标</strong><p>用户提供的 TEVA 单颗药照片，在现有 <code>/v1/scan</code> 页面得到两个重叠检测框，后续显示与原始药物不能直接对应的高相似度目录候选（约 0.97–0.99）。必须回归测试 localisation、crop 与分数解释。不能用这两个框来自动判定“用户拿了两颗药”。</p></div><div class="filterbar"><input type="search" id="api-filter" placeholder="搜索接口 / 决策 / 问题，例如 match、blister、dose"><select id="priority-filter"><option value="">全部优先级</option><option value="P0">P0 必做</option><option value="P1">P1</option><option value="P2">P2</option></select></div><p id="api-count" style="font-size:11px;color:#8496a7"></p><div class="table-scroll"><table class="datatable" id="api-table"><thead><tr><th>Method</th><th>Endpoint</th><th>决定</th><th>Priority</th><th>问题 / 修改建议</th><th>验收</th></tr></thead><tbody><tr data-prio="P0" data-query="/health保留返回模型/目录可用状态；明确冷启动、版本及响应 schema；检测网络与延迟"><td class="mono">GET</td><td class="mono endpoint">/health</td><td>保留</td><td><span class="pill sev-red">P0</span></td><td>返回模型/目录可用状态；明确冷启动、版本及响应 schema；检测网络与延迟</td><td class="testtxt">健康检查返回准确；失败、冷启动不会伪装正常</td></tr><tr data-prio="P0" data-query="/v1/embed保留 + 明确契约只支持已裁剪裸片；返回 256-d 及 embedding_space_id、model_version、preprocess_version、normalized"><td class="mono">POST</td><td class="mono endpoint">/v1/embed</td><td>保留 + 明确契约</td><td><span class="pill sev-red">P0</span></td><td>只支持已裁剪裸片；返回 256-d 及 embedding_space_id、model_version、preprocess_version、normalized</td><td class="testtxt">两次同图向量一致性；维度、NaN、预处理版本验证</td></tr><tr data-prio="P0" data-query="/v1/matchmvp 保留gallery 为请求载荷，不是 hf 服务器持久图库；明确 threshold、margin、tie/unknown 结果；按版本拒绝跨空间对比"><td class="mono">POST</td><td class="mono endpoint">/v1/match</td><td>MVP 保留</td><td><span class="pill sev-red">P0</span></td><td>Gallery 为请求载荷，不是 HF 服务器持久图库；明确 threshold、margin、tie/unknown 结果；按版本拒绝跨空间对比</td><td class="testtxt">同药/异药/相似规格/未知药 FPR、FNR、ambiguous 测试</td></tr><tr data-prio="P0" data-query="/v1/identify保留候选检索返回可能的美国目录 top-k；需要 imprint/shape/colour 约束与非分数概率声明"><td class="mono">POST</td><td class="mono endpoint">/v1/identify</td><td>保留候选检索</td><td><span class="pill sev-red">P0</span></td><td>返回可能的美国目录 Top-k；需要 imprint/shape/colour 约束与非分数概率声明</td><td class="testtxt">真实 C3PI 标签 ground truth；Top-k、刻印消融、非目录药拒识</td></tr><tr data-prio="P0" data-query="/v1/scan仅候选/调试，不能直接安全核验现有 stand-in finder 一颗药检出两个框；拆出 detection 和 dose rule；不要把目录 score 当确认"><td class="mono">POST</td><td class="mono endpoint">/v1/scan</td><td>仅候选/调试，不能直接安全核验</td><td><span class="pill sev-red">P0</span></td><td>现有 stand-in finder 一颗药检出两个框；拆出 detection 和 dose rule；不要把目录 score 当确认</td><td class="testtxt">单颗变双框回归测试、NMS、数量与背景测试、结构化 JSON schema</td></tr><tr data-prio="P1" data-query="/v1/pills/search保留按药名、规格查询；返回产品 id/市场/品牌/强度/剂型，防止同成分不同产品合并"><td class="mono">GET</td><td class="mono endpoint">/v1/pills/search</td><td>保留</td><td><span class="pill sev-amber">P1</span></td><td>按药名、规格查询；返回产品 ID/市场/品牌/强度/剂型，防止同成分不同产品合并</td><td class="testtxt">500mg vs 850mg、IR vs XR、组合药排序</td></tr><tr data-prio="P1" data-query="/v1/pills/{pill_id}保留目录产品详情；将产品/strength/form/market 的标识完整返回"><td class="mono">GET</td><td class="mono endpoint">/v1/pills/{pill_id}</td><td>保留</td><td><span class="pill sev-amber">P1</span></td><td>目录产品详情；将产品/strength/form/market 的标识完整返回</td><td class="testtxt">目录缺字段/不可查询 ID 的处理</td></tr><tr data-prio="P2" data-query="/v1/pills/{pill_id}/image/{n}保留为辅助视觉参考c3pi 研发使用限制、产品图像不一定对应本地患者持有实物"><td class="mono">GET</td><td class="mono endpoint">/v1/pills/{pill_id}/image/{n}</td><td>保留为辅助视觉参考</td><td><span class="pill sev-grey">P2</span></td><td>C3PI 研发使用限制、产品图像不一定对应本地患者持有实物</td><td class="testtxt">图片 URL、许可说明和 404 处理</td></tr><tr data-prio="P2" data-query="/v1/feedbackmvp 不默认调用和患者自用 gallery 严格分离；仅显式 opt-in、可撤回，label_source 需审核队列"><td class="mono">POST</td><td class="mono endpoint">/v1/feedback</td><td>MVP 不默认调用</td><td><span class="pill sev-grey">P2</span></td><td>和患者自用 Gallery 严格分离；仅显式 opt-in、可撤回，label_source 需审核队列</td><td class="testtxt">无同意拒绝、重复上传、撤销后删除、未核验标签隔离</td></tr><tr data-prio="P2" data-query="/v1/feedback/{consent_id}保留撤回功能服务端实际删除的持久化验证及审计机制；不要预先声称删除成功"><td class="mono">DELETE</td><td class="mono endpoint">/v1/feedback/{consent_id}</td><td>保留撤回功能</td><td><span class="pill sev-grey">P2</span></td><td>服务端实际删除的持久化验证及审计机制；不要预先声称删除成功</td><td class="testtxt">上传→撤回→确认不可恢复、重试幂等</td></tr><tr data-prio="P1" data-query="/v1/safety/medications保留兼容，安全服务逻辑拆分ddinter 2.0 nc 授权；只有可映射成分可筛查；输出 checked/unchecked coverage"><td class="mono">POST</td><td class="mono endpoint">/v1/safety/medications</td><td>保留兼容，安全服务逻辑拆分</td><td><span class="pill sev-amber">P1</span></td><td>DDInter 2.0 NC 授权；只有可映射成分可筛查；输出 checked/unchecked coverage</td><td class="testtxt">已知相互作用阳性/阴性/未知成分，空告警不能证明安全</td></tr><tr data-prio="P0" data-query="/v1/safety/dose迁移核心规则至主 backend用药计划与患者事件只有主 app 知道；支持 actual time、prn、停药和用户未确认"><td class="mono">POST</td><td class="mono endpoint">/v1/safety/dose</td><td>迁移核心规则至主 Backend</td><td><span class="pill sev-red">P0</span></td><td>用药计划与患者事件只有主 App 知道；支持 actual time、PRN、停药和用户未确认</td><td class="testtxt">多次确认、历史停药、错规格、重复 dose、无照片事件</td></tr><tr data-prio="P1" data-query="/v1/safety/label迁至 medication knowledge 工具来源于美国 openfda；不要将普通标签说明当个人化医嘱"><td class="mono">GET</td><td class="mono endpoint">/v1/safety/label</td><td>迁至 Medication Knowledge 工具</td><td><span class="pill sev-amber">P1</span></td><td>来源于美国 openFDA；不要将普通标签说明当个人化医嘱</td><td class="testtxt">产品链接准确性、缺失标签、来源日期和引用</td></tr><tr data-prio="P1" data-query="/v1/detect建议新增（团队协商）单独输出 boxes、pill_count、nms、quality_flags，或暂由主 app 提供 boxes"><td class="mono">POST</td><td class="mono endpoint">/v1/detect</td><td>建议新增（团队协商）</td><td><span class="pill sev-amber">P1</span></td><td>单独输出 boxes、pill_count、NMS、quality_flags，或暂由主 App 提供 boxes</td><td class="testtxt">1 pill→1 box, overlap, 2 pills→2 boxes, min box size</td></tr><tr data-prio="P0" data-query="/v1/model-info建议新增服务版本≠模型版本。暴露 embedding_space_id、preprocess、阈值/边际、训练覆盖范围"><td class="mono">GET</td><td class="mono endpoint">/v1/model-info</td><td>建议新增</td><td><span class="pill sev-red">P0</span></td><td>服务版本≠模型版本。暴露 embedding_space_id、preprocess、阈值/边际、训练覆盖范围</td><td class="testtxt">端到端向量版本校验；升级后旧向量提示 re-embed</td></tr><tr data-prio="P2" data-query="/v1/search-by-embedding未来优化避免 /embed 后 /identify 重跑 encoder，前提是目录搜索兼容 embedding"><td class="mono">POST</td><td class="mono endpoint">/v1/search-by-embedding</td><td>未来优化</td><td><span class="pill sev-grey">P2</span></td><td>避免 /embed 后 /identify 重跑 encoder，前提是目录搜索兼容 embedding</td><td class="testtxt">与原 /identify 候选排序一致性/性能</td></tr><tr data-prio="P0" data-query="/api/medications/enroll主应用新建ocr、查重、draft、患者确认、regimen 历史保留"><td class="mono">App</td><td class="mono endpoint">/api/medications/enroll</td><td>主应用新建</td><td><span class="pill sev-red">P0</span></td><td>OCR、查重、draft、患者确认、Regimen 历史保留</td><td class="testtxt">缺失用法不得激活确定性 dose validation</td></tr><tr data-prio="P0" data-query="/api/dose-check主应用新建agent context + modality routing + external vision + deterministic policy + event"><td class="mono">App</td><td class="mono endpoint">/api/dose-check</td><td>主应用新建</td><td><span class="pill sev-red">P0</span></td><td>Agent context + modality routing + external vision + deterministic policy + event</td><td class="testtxt">match 和 intake 两个状态分离，错误检测框不计数</td></tr><tr data-prio="P0" data-query="/api/agent/session主应用新建受约束 tool-calling、恢复 state、跨会话上下文、权限与 tool-trace"><td class="mono">App</td><td class="mono endpoint">/api/agent/session</td><td>主应用新建</td><td><span class="pill sev-red">P0</span></td><td>受约束 tool-calling、恢复 state、跨会话上下文、权限与 tool-trace</td><td class="testtxt">未知输入澄清、工具失败重试、重复写保护</td></tr><tr data-prio="P1" data-query="/api/care/summary主应用新建长期趋势、health tracking、既定预防任务、就诊准备"><td class="mono">App</td><td class="mono endpoint">/api/care/summary</td><td>主应用新建</td><td><span class="pill sev-amber">P1</span></td><td>长期趋势、health tracking、既定预防任务、就诊准备</td><td class="testtxt">不能从空记录推断临床依从率</td></tr></tbody></table></div></div></section>
+<section class="doc-section" id="panel-tests"><div class="paper"><div class="section-label">AGENTIC DEMONSTRATIONS</div><h2>真实 Agent 应当怎样表现？</h2><p>每个 Demo 应展示 Agent 的 <b>上下文读取 → 工具选择 → 根据结果修正下一步 → 安全判断 → 状态持久化</b>。这里是设计测试剧本，不是已经通过的测试。</p><details class="scenario"><summary><span class="scenario-head">A · 新处方或药房标签登记</span><span class="scenario-who">Patient → Enrollment Agent</span></summary><div class="scenario-body"><ol><li>患者上传合成处方 PDF / 药房标签</li><li>Agent 调用 OCR，读取药物名、规格、剂型和明确写出的用法</li><li>发现旧疗程/新规格，读取历史并提问：停用旧药还是新增独立疗程？</li><li>用户对照原始资料核对，保留变更记录</li><li>可选上传包装参考或正常服药时的裸片，生成个人 embeddings</li><li>规则检查 → 创建版本化 Regimen → 生成提醒</li></ol><div class="meta"><strong>Tools</strong><code>extract_medication_document · find_medication_product · check_duplicate_regimen · activate_regimen · /v1/embed</code><strong>Expected</strong><p>新疗程存储、旧疗程保留，未核实字段保留 pending；不把 Stage 2 top-1 当作医嘱。</p></div></div></details><details class="scenario"><summary><span class="scenario-head">B · 正常服药视觉核对</span><span class="scenario-who">Patient → Dose Agent</span></summary><div class="scenario-body"><ol><li>患者点击“检查今晚的药”并拍一颗裸药片</li><li>Agent 读取有效用药计划、个人图库、此前 Dose Event</li><li>单药裁剪/质量检查 → /embed → /match（同版本 embeddings）</li><li>确定性规则检查现有计划、规格来源、已记录剂量</li><li>Agent 解释“照片外观符合某个参考”，不宣称“可以安全服用”</li><li>患者报告是否已经服用；分别存 vision_status 和 intake_status</li></ol><div class="meta"><strong>Tools</strong><code>get_active_regimens · get_gallery · /v1/embed · /v1/match · evaluate_dose_policy · record_dose_event</code><strong>Expected</strong><p>有工具调用日志 + 双证据状态 + 可恢复的下一次会话。</p></div></div></details><details class="scenario"><summary><span class="scenario-head">C · 一颗药误被检测成两颗</span><span class="scenario-who">Patient → Vision → Policy → Agent</span></summary><div class="scenario-body"><ol><li>患者上传你已测试的单颗 TEVA 药片原图</li><li>现有 /scan stand-in finder 错误输出两个重叠框</li><li>独立检测质量门发现 overlap/count inconsistency</li><li>Agent 不将其作为“两颗药片”的剂量事实；要求单颗重新裁剪或切换 /identify</li><li>即使目录 similarity 0.99，仍保留 possible matches</li><li>记录 failure_reason 与待确认事件，不能据此报重复剂量</li></ol><div class="meta"><strong>Tools</strong><code>scan_diagnostics · duplicate_boxes_guard · /v1/identify · save_unresolved_event</code><strong>Expected</strong><p>错误视觉工具的输出被安全边界拦截；用户得到可操作的补充取证引导。</p></div></div></details><details class="scenario"><summary><span class="scenario-head">D · 无字透明 Blister</span><span class="scenario-who">Patient → Modality Router</span></summary><div class="scenario-body"><ol><li>用户拍摄未拆开的透明药板，塑料和铝箔均无可读文字</li><li>Agent 判断 OCR 无文字、裸片模型不适用</li><li>查找已登记的包装图片可作为参考，但实验匹配不做药品身份确认</li><li>请求同一产品的药盒、药房标签、原始处方或联系药剂师</li><li>不要求为拍照提前把药片取出</li><li>保存 unverified 状态，待以后取得可靠来源再登记</li></ol><div class="meta"><strong>Tools</strong><code>route_medication_image · check_reference_sets · ask_for_source · save_unverified_case</code><strong>Expected</strong><p>不强行把无字 Blister 输入 Stage 2 输出虚假的确认。</p></div></div></details><details class="scenario"><summary><span class="scenario-head">E · 持续用药与复诊准备</span><span class="scenario-who">Scheduler → Agent → Patient</span></summary><div class="scenario-body"><ol><li>系统发现多个晚间 Dose Event 缺少确认</li><li>Agent 不能直接说“漏服”，先问患者是否忘记、没药或有不适</li><li>获取患者自述后记录 adherence barrier</li><li>记录一次症状或血压读数，并按时间展示趋势</li><li>读取已有护理计划，提醒复诊/筛查/随访</li><li>生成可供用户带给药剂师的摘要与问题列表</li></ol><div class="meta"><strong>Tools</strong><code>get_adherence_history · record_health_observation · create_care_task · prepare_review_summary</code><strong>Expected</strong><p>跨日记忆与主动个性化后续动作，覆盖 Challenge 2 长期管理。</p></div></div></details></div></section>
+<section class="doc-section" id="panel-roadmap"><div class="paper"><div class="section-label">DEVELOPMENT PLAN</div><h2>从空仓库到比赛 MVP</h2><p>优先保证一个真实、可恢复、可安全失败的端到端流程；不要在提交前重训双头模型或开发医生端。</p><div class="roadmap-row"><div class="phase">NOW · 阻塞</div><div>修复 `/scan` 一颗药出现双重框的回归错误；真实 Response Schema；稳定的 `/embed` + `/match` + `/identify` adapter；外部 API 失败处理。</div></div><div class="roadmap-row"><div class="phase">NOW · 主应用</div><div>Patient Regimen + Source Provenance + Personal Gallery vectors + Dose Events；一条从登记到服药记录的纵向闭环。</div></div><div class="roadmap-row"><div class="phase">NOW · Agent</div><div>有状态的 Tool Calling；模态分流；遇到 uncertain/conflict 的主动追问、拒识和持久化；确定性 safety gate。</div></div><div class="roadmap-row"><div class="phase">NEXT · Challenge 2</div><div>Medication Understanding、基本健康记录、护理计划中的 preventive tasks、复诊摘要、caregiver 通知。</div></div><div class="roadmap-row"><div class="phase">LATER</div><div>无字 Blister 训练/评估、多头模型、search-by-embedding、全局 retraining、中国药片数据、真实医疗机构集成。</div></div><div class="recommend"><b>推荐第一个实现切片：</b>用户手动登记并确认一条合成用药计划 → Patient/Regimen DB → 上传一张单颗裸片 → 真实 /embed + /match 结果 → deterministic safety gate → 用户确认是否服药 → Dose Event。此后再补 OCR、长时状态和多模态分流。</div><div class="review-grid"><div class="review-card"><h4>当前负责人与产品界面</h4><p>主 Actor = Patient。关联 Caregiver 仅作为授权通知联系人。无 Doctor Portal、无真实 NEHR 同步。</p></div><div class="review-card"><h4>已有的技术资产</h4><p>外部 PharmaScan API 有 OpenAPI v0.4.0，UI 演示过 /identify、/scan。主应用数据库、Agent、Stage 1 detector、OCR 仍需开发。</p></div><div class="review-card"><h4>不要混淆的两种模型任务</h4><p>Personal Gallery 是 same-reference verification；US C3PI catalogue 是 open-world candidate retrieval。两者都不能独自证明药物规格或用药许可。</p></div><div class="review-card"><h4>HSA / 数据许可</h4><p>以潜在受监管 SaMD 做风险管理设计，不因 API 声明 “not a medical device” 就认定监管豁免。DDInter NC 数据、NLM C3PI 研发使用范围需另行核查。</p></div></div></div></section>
+<section class="doc-section" id="panel-principles"><div class="paper"><div class="section-label">TRUST BOUNDARY</div><h2>六条不能越过的产品约束</h2><div class="two-col"><div class="scope"><strong>01 · 权威资料与视觉参考分离</strong><p>处方/药房标签为用药指示的来源；模型预测只能作为视觉候选。不同规格/剂型/品牌/市场必须在产品身份层区分。</p></div><div class="scope"><strong>02 · Gallery 与患者长期状态在主应用</strong><p>Private Storage 存 Enrollment 图片与处方；PostgreSQL 存产品/Regimen/ReferenceSets/vector(256)/事件/版本。每天的普通照片不必默认永久保存。</p></div><div class="scope"><strong>03 · embedding_space_id 必须一致</strong><p>裸片 /embed 得到的 256-d 向量与包装模型（如未来引入）不能混用。同维度也不等于相同向量空间。</p></div><div class="scope"><strong>04 · 已识别 ≠ 应当服用 ≠ 已经吞服</strong><p>分开记录 vision_status 与 intake_status；不推断缺少记录代表漏服；模型不能自行建议补药、停药或改变剂量。</p></div><div class="scope"><strong>05 · 独立安全策略决定动作</strong><p>用药计划/时间/历史/权限/重复操作在后端验证，不将 /scan 的 schedule alerts 作为唯一可信依据；识别失败明确 abstain。</p></div><div class="scope"><strong>06 · 真实开发与临床部署分开</strong><p>只用合成数据演示。HSA 分类与临床验证另行确认；DDInter 非商业许可和 C3PI 使用条件不能被免费 Demo 的性质自动覆盖。</p></div></div><div class="audit-callout" style="margin-top:24px"><strong>能力与任务之间的区别</strong><p>Medications management ≠ 仅保存药名；Adherence ≠ 只发通知；Health tracking ≠ 服药计数；Preventive care ≠ 只提醒续药；Healthcare preparation ≠ 无依据医学诊断。完整 Agent 要把它们串成可追踪的长期任务。</p></div></div></section>
+</main><aside class="inspector"><div id="inspect-body"></div></aside></div><footer class="footer">PHARMASCAN CARE — architectural prototype • Based on team-supplied OpenAPI v0.4.0 and screenshot evidence • No clinical use, drug-identity guarantee, or patient-safety certification implied. Diagram contents are implementation designs, not production evidence.</footer><script>
+const NODE_DATA = {"ov_patient": {"title": "患者 Patient · 语音 / 文本 / 上传", "kind": "input", "desc": "一套患者界面，默认面向成人居家用药，老年可及性；关联照护者仅为授权通知联系人。", "owner": "Patient UI", "tools": "Chat, speech, camera, PDF", "evidence": "Patient session + upload", "status": "设计/待实现"}, "ov_agent": {"title": "Medication Care Agent · 意图 → 计划 → 工具 → 追问", "kind": "agent", "desc": "持续性的、有状态的任务协调，不是只执行一次分类。可在失败后调整策略。", "owner": "Agent orchestrator", "tools": "Intent, tool routing, state", "evidence": "Trace / state machine", "status": "设计/待实现"}, "ov_store": {"title": "Patient Context & Memory · Regimen / Gallery / History", "kind": "data", "desc": "所有患者用药状态、图库与长期记忆由主应用的数据库持久化；HF API 不保存本应用的 Patient Gallery。", "owner": "FastAPI + PostgreSQL", "tools": "get_active_regimens, get_gallery, get_history", "evidence": "Versioned records", "status": "设计/待实现"}, "ov_vision": {"title": "PharmaScan Vision API · embed / match / identify", "kind": "vision", "desc": "提供视觉相似性候选。用户已观察到 scan 的重复检测，不应让 scan 直接宣称完成剂量核验。", "owner": "Stage 2 service", "tools": "/embed, /match, /identify; /scan experimental", "evidence": "Ranked candidates + model metadata", "status": "接口已定义；真实性待测"}, "ov_ocr": {"title": "Document & Package OCR · PDF / 有字包装", "kind": "vision", "desc": "提取产品身份及使用说明的文本证据。无字 Blister 不能走 OCR。", "owner": "OCR tool", "tools": "OCR + field parser", "evidence": "Field provenance", "status": "待开发"}, "ov_knowledge": {"title": "Medication Knowledge · 患者易懂解释", "kind": "vision", "desc": "患者特定用法来自既有 Regimen；一般药物信息来自许可来源且引用来源。", "owner": "Knowledge tool", "tools": "Drug label / licensed retrieval", "evidence": "Citation + retrieval version", "status": "待开发"}, "ov_policy": {"title": "Deterministic Safety Gate · 来源 / 冲突 / 权限 / 不确定", "kind": "policy", "desc": "排除不可信视觉推断，检查当前计划与用药历史；剂量安全规则位于主后端，不交给 LLM 决策。", "owner": "FastAPI policy layer", "tools": "Regimen checks, evidence reconciliation", "evidence": "Rule IDs + safe outcomes", "status": "待开发"}, "ov_actions": {"title": "Patient Action / Memory · 确认、记录、提醒、复诊摘要", "kind": "positive", "desc": "患者主动确认服药；安全规则决定是否可发出通知；每个写操作要求授权与幂等。", "owner": "App tools", "tools": "record_dose, reminder, checkin", "evidence": "Dose event + tool trace", "status": "待开发"}, "ov_care": {"title": "Linked Caregiver · 经授权的有限通知", "kind": "input", "desc": "Caregiver 无需单独 portal；仅在经过验证和授权的情况下接收有限通知，不能替患者开药或验证真实性。", "owner": "Notification layer", "tools": "notify_caregiver", "evidence": "Consent + delivery status", "status": "待开发"}, "en_start": {"title": "添加 / 更新药物 · Add or update", "kind": "input", "desc": "患者以对话、上传或手动输入发起；不需要医生 Portal。", "owner": "Patient", "tools": "add_medication intent", "evidence": "—", "status": "设计/待实现"}, "en_source": {"title": "采集来源 · PDF · 处方 · 药袋 · 包装 · 手动", "kind": "input", "desc": "收集尽量少的输入；必须保存文档来源和日期，OCR 信息不可当成医疗确认。", "owner": "Patient", "tools": "upload / manual", "evidence": "source type", "status": "设计/待实现"}, "en_ocr": {"title": "OCR + 字段提取 · 名称 · 规格 · 剂型 · 用法", "kind": "vision", "desc": "抽取而非推断；来源中没有的字段留 null。无字铝塑板不可提取产品文字。", "owner": "Document parser", "tools": "extract_medication_document", "evidence": "Field-level evidence", "status": "待开发"}, "en_review": {"title": "患者对照来源核对 · 疑问字段要澄清", "kind": "confirm", "desc": "必须对照原始处方/药房标签核对。患者确认≠药剂师专业验证。", "owner": "Patient + Agent", "tools": "confirm_draft", "evidence": "Confirmed fields", "status": "设计/待实现"}, "en_dedupe": {"title": "产品标识 / 疗程查重 · 品牌、规格、IR/XR、市场、日期", "kind": "data", "desc": "避免仅按药名/图像合并；历史重新开药属于新疗程。", "owner": "Backend", "tools": "find_product, check_regimen_duplicates", "evidence": "Product ID / warnings", "status": "设计/待实现"}, "en_pending": {"title": "保留 Draft / 未核实状态 · 不生成可靠剂量核对", "kind": "warning", "desc": "身份或用法缺失/冲突，存为 pending_clarification，提示查证。", "owner": "Backend", "tools": "save_medication_draft", "evidence": "Reason + source", "status": "设计/待实现"}, "en_regimen": {"title": "创建版本化 Regimen · 仅确认的用法建立计划", "kind": "data", "desc": "记录 active/historical 版本、起止日期、PRN 和 source；不推测疾病或疗程结束。", "owner": "Backend", "tools": "activate_regimen", "evidence": "Version + schedule", "status": "设计/待实现"}, "en_risk": {"title": "结构化用药清单筛查 · 重复成分 · 潜在 DDI", "kind": "policy", "desc": "仅在成分身份可用时调用；不能据“无告警”宣称安全。研究原型 DDInter 许可需核查。", "owner": "Medication Safety Tool", "tools": "/safety/medications (advisory)", "evidence": "Coverage + alert provenance", "status": "接口已定义；运行待测"}, "en_photo": {"title": "选择参考形式 · 药盒 / 铝塑板 / 裸片", "kind": "input", "desc": "包装照片可选；裸片照片可等到实际取药时采集，不要求为了建档提前拆药。", "owner": "Patient", "tools": "upload_visual_reference", "evidence": "Image modality", "status": "设计/待实现"}, "en_pack": {"title": "保存包装参考图 · Box / Printed / Clear Blister", "kind": "data", "desc": "原始包装图保留在个人记录中，不自动作为 Stage 2 的 256-d 裸片 embedding。", "owner": "Private Storage", "tools": "save_reference_set", "evidence": "source_verified / not verified", "status": "待开发"}, "en_embed": {"title": "裸片参考 · /crop → /v1/embed → vector(256)", "kind": "vision", "desc": "图片与 embedding 按 model + preprocessing + modality 版本管理，不得自动视作权威产品身份。", "owner": "Vision Service", "tools": "/v1/embed", "evidence": "256-d, model/version", "status": "接口已定义；运行待测"}, "en_activate": {"title": "完成建档 · 设置提醒 + 保存变更日志", "kind": "positive", "desc": "必须区分药品登记成功与视觉 Gallery ready；没有裸片照片也可记录已核实用药计划。", "owner": "Backend", "tools": "save_regimen, schedule_reminders", "evidence": "Audit, care task", "status": "设计/待实现"}, "ds_start": {"title": "服药提醒 / 患者主动发起", "kind": "input", "desc": "用户可带照片或不带照片；提醒只能表示予定时间，不代表漏服。", "owner": "Patient / Scheduler", "tools": "dose_check", "evidence": "—", "status": "设计/待实现"}, "ds_context": {"title": "读取 Active Regimen · 当前剂量 + 历史 Dose Events", "kind": "data", "desc": "按患者权限和时区获取当前计划，排除停用疗程，检查是否已有 taken/unsure。", "owner": "Backend", "tools": "get_active_regimens/get_dose_history", "evidence": "Schedule snapshot", "status": "设计/待实现"}, "ds_no_photo": {"title": "不拍照：自述服药 · 未进行视觉核对", "kind": "confirm", "desc": "降低长期使用负担；如患者已经服用或忘记拍照可补记，但不得假装视觉核验成功。", "owner": "Patient", "tools": "record_dose_event", "evidence": "not_visually_checked", "status": "设计/待实现"}, "ds_route": {"title": "有照片 → 识别输入类型 · 裸片 / 有字包装 / 无字 Blister", "kind": "agent", "desc": "优先由用户输入意图；不明确时 Agent 澄清，并结合既定计划选择工具。", "owner": "Agent", "tools": "route_medication_image", "evidence": "modality + intent", "status": "设计/待实现"}, "ds_crop": {"title": "裸片：单颗手动 Crop 优先 · 多颗需正确 boxes", "kind": "vision", "desc": "现有 stand-in finder 出现 1→2 重叠框；未修好前不依赖它自动核对计数。", "owner": "App / Vision", "tools": "/v1/embed; boxes if multi", "evidence": "Count/quality", "status": "单颗裁剪可测试；多颗不可靠"}, "ds_gallery": {"title": "个人裸片图库 · /embed → /match", "kind": "vision", "desc": "只能比较同 embedding_space 的图库向量；match 是视觉参考匹配，不能确定成分/规格。", "owner": "PharmaScan", "tools": "/v1/embed + /v1/match", "evidence": "match / ambiguous / unknown", "status": "接口已定义；运行待测"}, "ds_catalogue": {"title": "目录候选辅助检索 · /identify + 刻印/正反面", "kind": "vision", "desc": "未知、不一致时可能用目录候选进一步解释，但高 similarity 仍不是医学身份认证。", "owner": "PharmaScan", "tools": "/v1/identify", "evidence": "Top-k candidate list", "status": "已见 UI 输出；准确率待测"}, "ds_ocr": {"title": "有字包装：OCR 提取 · 匹配产品、规格、剂型", "kind": "vision", "desc": "不必拆片；无法独立确认包装内容时保留不确定。", "owner": "OCR tool", "tools": "extract_package_text", "evidence": "Text and source", "status": "待开发"}, "ds_blister": {"title": "无字 Blister · 寻找药盒/药袋/原始记录", "kind": "warning", "desc": "透明无字只能实验性比对参考外观；不透明且无字无法从内部药片判断身份。", "owner": "Agent", "tools": "ask_for_label", "evidence": "unverified reason", "status": "待开发"}, "ds_policy": {"title": "Evidence + Regimen Gate · 身份、外观、时间、剂量、重复风险", "kind": "policy", "desc": "确定性核对：已停用、不同规格、双次记录、crop 质量、参考冲突。计数错误时不得据此报警“多吃一颗”。", "owner": "Backend rules", "tools": "evaluate_dose_check", "evidence": "Rule ids + decision", "status": "待开发"}, "ds_retake": {"title": "证据不足 / 重拍 · 换角度、查标签、必要时人工咨询", "kind": "warning", "desc": "Agent 可重试有限次数并改变取证方式；不能一直拍到某个高相似度结果。", "owner": "Agent", "tools": "ask_clarification / escalation", "evidence": "Abstained state", "status": "设计/待实现"}, "ds_explain": {"title": "结果解释 · “外观符合记录”≠“安全可服用”", "kind": "agent", "desc": "针对可靠程度用不同措辞；不输出安全用药许可，不根据视觉类别更改用药。", "owner": "Agent", "tools": "explain_dose_evidence", "evidence": "Explanation + limitations", "status": "设计/待实现"}, "ds_confirm": {"title": "用户确认真实发生了什么 · taken / not_taken / unsure", "kind": "confirm", "desc": "视觉匹配与吞服确认是两条独立证据轴；重复确认须幂等。", "owner": "Patient", "tools": "record_dose_event", "evidence": "self_report", "status": "设计/待实现"}, "ds_save": {"title": "写入 Dose Event + 下次追踪 · 需要时通知授权 Caregiver", "kind": "positive", "desc": "保存证据、规则、模型版本和下一次提醒；外部通知受同意与敏感性控制。", "owner": "Backend", "tools": "write_event / notify", "evidence": "Audit + follow-up", "status": "设计/待实现"}, "un_start": {"title": "用户：这是什么药？", "kind": "input", "desc": "没有登记的药片或包装；和服药核对是不同任务。", "owner": "Patient", "tools": "identify intent", "evidence": "—", "status": "设计/待实现"}, "un_route": {"title": "识别形态与来源信息", "kind": "agent", "desc": "缺少上下文时问“裸片 / 包装 / Blister”？有处方/药房标签吗？", "owner": "Agent", "tools": "route_image", "evidence": "—", "status": "设计/待实现"}, "un_loose": {"title": "裸片 1–2 张 · 识别 imprint / shape / colour", "kind": "vision", "desc": "/identify 返回美国产品目录的视觉候选；不能直接推断药品真实身份。", "owner": "Vision", "tools": "/v1/identify", "evidence": "Candidates / rank", "status": "设计/待实现"}, "un_print": {"title": "有字包装 · OCR + 产品字段查询", "kind": "vision", "desc": "产品名、规格和剂型可检索，需防止同名不同规格与剂型。", "owner": "OCR / product lookup", "tools": "OCR + product matcher", "evidence": "Field provenance", "status": "设计/待实现"}, "un_blank": {"title": "无字/遮挡 Blister · 无法可靠判断", "kind": "warning", "desc": "缺少文字/可见刻印时不得只凭包装外观认定具体药品。", "owner": "Agent", "tools": "abstain / request packaging", "evidence": "Unverified", "status": "设计/待实现"}, "un_candidates": {"title": "呈现 Possible Matches · 排名 + 已知限制", "kind": "policy", "desc": "不是 identified/verified，也不能给出是否可服用的结论。", "owner": "Agent", "tools": "format_candidates", "evidence": "Candidate list", "status": "设计/待实现"}, "un_more": {"title": "下一步：补图、找包装、问药剂师", "kind": "confirm", "desc": "用户可决定进一步核查、结束任务或发起待核实 Enrollment。", "owner": "Patient", "tools": "ask_clarification", "evidence": "—", "status": "设计/待实现"}, "un_save": {"title": "结束/保存未核实记录 · 不自动建立 Verified Gallery", "kind": "data", "desc": "不得将 top-1 或用户一声确认变成全局训练 ground truth。", "owner": "Backend", "tools": "save_unverified_case", "evidence": "Audit", "status": "设计/待实现"}, "lg_trigger": {"title": "定时提醒 / 后续对话 / Health Check-in", "kind": "input", "desc": "外部事件和用户事件都是 agent 持续工作触发器，而不只是每次图片分类。", "owner": "Scheduler / Patient", "tools": "cron, chat, reminders", "evidence": "—", "status": "设计/待实现"}, "lg_load": {"title": "读取上次状态 · 服药事件、观察值、待办与偏好", "kind": "data", "desc": "仅访问授权患者；历史状态跨会话保留。", "owner": "Backend", "tools": "load_state / get_history", "evidence": "Time series", "status": "设计/待实现"}, "lg_trend": {"title": "确定性统计 + 趋势观察 · 未确认次数、症状、测量值", "kind": "data", "desc": "区分缺少记录和已知漏服；时序相关不能证明药物引起症状。", "owner": "Backend", "tools": "compute_adherence / observations", "evidence": "Report metadata", "status": "设计/待实现"}, "lg_barrier": {"title": "Agent 主动澄清障碍 · 忘记 / 不适 / 没有药 / 操作困难", "kind": "agent", "desc": "对问题做针对性追问，不能擅自建议补服或减药。", "owner": "Agent", "tools": "ask_barrier_questions", "evidence": "Patient self-report", "status": "设计/待实现"}, "lg_tasks": {"title": "已有护理计划中的任务 · 复诊、筛查、随访、生活方式", "kind": "data", "desc": "真正覆盖 preventive care；仅补药提醒不足以涵盖预防保健。", "owner": "Care tasks", "tools": "get_tasks / create_task", "evidence": "Document source", "status": "设计/待实现"}, "lg_knowledge": {"title": "患者友好解释 + 来源 · 具体用法来自原始指示", "kind": "vision", "desc": "MedlinePlus/DailyMed 等只是一般参考，不替代个人医嘱。", "owner": "Knowledge Tool", "tools": "retrieve_medication_info", "evidence": "Source citations", "status": "设计/待实现"}, "lg_summary": {"title": "生成 Medication Review Summary · 时间线、疑问、未确认记录", "kind": "agent", "desc": "汇总用户可审阅的事实，避免写“AI prevented clinical error”等未验证断言。", "owner": "Agent", "tools": "prepare_review_summary", "evidence": "Cited timeline", "status": "设计/待实现"}, "lg_followup": {"title": "提醒或交付摘要 · 用户 / 授权照护者", "kind": "positive", "desc": "有状态的后续任务；通知不包含未经确认的敏感医疗结论。", "owner": "Backend", "tools": "schedule_followup / notify", "evidence": "Notification audit", "status": "设计/待实现"}, "ag_input": {"title": "OBSERVE · 用户输入 / 到期事件 / 工具回执", "kind": "input", "desc": "明确知道是什么任务触发。", "owner": "Agent", "tools": "Input event", "evidence": "—", "status": "设计/待实现"}, "ag_auth": {"title": "LOAD CONTEXT · 身份、Regimen、会话状态、来源", "kind": "data", "desc": "patient_id 在后端权限上下文获取，不信任 LLM 任意拼接。", "owner": "Backend", "tools": "get_context", "evidence": "—", "status": "设计/待实现"}, "ag_plan": {"title": "PLAN NEXT ACTION · 识别意图/缺失信息/选择工具", "kind": "agent", "desc": "Agent 根据工具结果规划下一步；可在流程中转到其他任务，例如 Unknown pill → Enrollment draft。", "owner": "Agent", "tools": "tool_selection", "evidence": "—", "status": "设计/待实现"}, "ag_tool": {"title": "EXECUTE TOOL · 受限、类型化的工具调用", "kind": "vision", "desc": "vision/OCR/knowledge/reminders 等工具均返回结构化结果与错误。", "owner": "Tool layer", "tools": "typed tool calls", "evidence": "—", "status": "设计/待实现"}, "ag_evidence": {"title": "EVIDENCE GATE · 冲突、来源、可信度、任务风险", "kind": "policy", "desc": "医疗相关 final decision 由确定性策略限制；LLM 不改规则。", "owner": "Policy Engine", "tools": "evaluate_evidence", "evidence": "—", "status": "设计/待实现"}, "ag_clarify": {"title": "ADAPT / CLARIFY · 换图片、追问、查其他来源", "kind": "agent", "desc": "示范 agentic 价值：依据失败原因选取新的证据获取工具，而非固定一次调用。", "owner": "Agent", "tools": "ask_user / retry", "evidence": "—", "status": "设计/待实现"}, "ag_confirm": {"title": "ACT WITH CONFIRMATION · 告知限制→确认→写事件", "kind": "confirm", "desc": "有风险的写入必须有用户确认和事务/幂等。", "owner": "Backend + Patient", "tools": "record_event", "evidence": "—", "status": "设计/待实现"}, "ag_memory": {"title": "MEMORY + FOLLOW-UP · 保存状态、安排下次任务", "kind": "positive", "desc": "形成跨会话记忆并在下一次到期事件继续。", "owner": "Backend", "tools": "save_state, care_task", "evidence": "—", "status": "设计/待实现"}};
+const VIEWS=['overview','enrollment','dose','unknown','longitudinal','agent'];
+let activeView='overview';
+let activeNode=null;
+const inspector=document.querySelector('#inspect-body');
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function detail(id){const a=NODE_DATA[id];if(!a)return;document.querySelectorAll('.graph-stage g.node.active').forEach(x=>x.classList.remove('active'));const el=document.getElementById(id);if(el)el.classList.add('active');activeNode=id;inspector.innerHTML=`<span class="type">${escapeHtml(a.kind.toUpperCase())}</span><h3>${escapeHtml(a.title)}</h3><p class="help">${escapeHtml(a.desc)}</p><div class="kv"><div class="key">责任组件 / Owner</div><div class="value">${escapeHtml(a.owner)}</div></div><div class="kv"><div class="key">相关工具 / Tools</div><div class="value">${escapeHtml(a.tools)}</div></div><div class="kv"><div class="key">主要证据 / Output</div><div class="value">${escapeHtml(a.evidence)}</div></div><div class="kv"><div class="key">状态 / Implementation</div><div class="value">${escapeHtml(a.status)}</div></div>`;}
+function selectView(view){activeView=view;document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));document.querySelectorAll('.sidebar-secondary').forEach(b=>b.classList.toggle('active',b.dataset.view===view));document.querySelectorAll('.flow-section,.doc-section').forEach(b=>b.classList.remove('active'));let p=document.getElementById('panel-'+view);if(p)p.classList.add('active');const scroll=p?.querySelector('.graph-scroll');if(scroll)scroll.scrollTop=0;if(scroll)scroll.scrollLeft=0;activeNode=null;inspector.innerHTML='<div class="type">SELECT A STEP</div><h3>查看步骤详情</h3><p class="help">点击左侧图中的节点，就能看到这个步骤是谁负责、调用哪些工具、产生哪些证据及当前实现状态。</p><div class="legend"><span><i style="background:#2b5b9b"></i>患者输入</span><span><i style="background:#147d72"></i>Agent</span><span><i style="background:#5955a8"></i>AI / API</span><span><i style="background:#b66c12"></i>Safety Gate</span><span><i style="background:#b85646"></i>不确定/升级</span><span><i style="background:#2e8058"></i>保存/完成</span></div>';
+window.scrollTo({top:Math.min(window.scrollY,document.querySelector('.layout').offsetTop-12),behavior:'smooth'});
+}
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>selectView(b.dataset.view)));
+document.querySelectorAll('.graph-stage g.node').forEach(el=>el.addEventListener('click',()=>detail(el.id)));
+document.querySelectorAll('.flow-section').forEach(panel=>{let zoom=1,stage=panel.querySelector('.graph-stage');function setzoom(z){zoom=Math.min(2.2,Math.max(.75,z));stage.style.width=`${Math.round(zoom*100)}%`;}panel.querySelector('.zoom-in').addEventListener('click',()=>setzoom(zoom+.2));panel.querySelector('.zoom-out').addEventListener('click',()=>setzoom(zoom-.2));panel.querySelector('.zoom-reset').addEventListener('click',()=>setzoom(1));});
+let filter=document.getElementById('api-filter'),priority=document.getElementById('priority-filter');function filterApi(){let q=filter.value.toLowerCase().trim(),p=priority.value;let count=0;document.querySelectorAll('#api-table tbody tr').forEach(r=>{let show=(!p||r.dataset.prio===p)&&(!q||r.dataset.query.includes(q));r.style.display=show?'':'none';count+=show?1:0});document.getElementById('api-count').textContent=`${count} / 20 endpoints`;}filter.addEventListener('input',filterApi);priority.addEventListener('change',filterApi);filterApi();selectView('overview');
+</script></body></html>

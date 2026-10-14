@@ -4,12 +4,12 @@ The served Stage 2 model: pill crops -> unit-length embeddings, plus the calibra
 Loads a serving export (scripts/export_model.py) or a training best.pt. Crops follow the crop contract
 (preprocess.crop_window); a crop that is already framed is passed as is.
 """
-import os
 
 import numpy as np
 import torch
 
-from epills.core.inference.preprocess import WINDOW, crop_window, eval_transform
+from epills.core.inference.preprocess import CROP_SIZE, IMAGE_SIZE, WINDOW, crop_window, eval_transform
+from epills.core.inference.runtime import cpu_cores
 from epills.core.models.hybrid import HybridPillNet
 
 
@@ -17,11 +17,14 @@ class Embedder:
     def __init__(self, path, device=None, batch_size=16):
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         if self.device.type == "cpu":
-            torch.set_num_threads(max(1, os.cpu_count() or 1))
+            torch.set_num_threads(cpu_cores())  # the container's real cores: oversubscribing slows PyTorch
         self.model, ckpt = HybridPillNet.from_checkpoint(path, self.device)
         self.version = ckpt.get("version") or ckpt.get("config", {}).get("name", "unversioned")
         self.calibration = ckpt.get("calibration") or {}
         self.window = self.calibration.get("window") or WINDOW  # the crop contract this model was calibrated with
+        # embeddings are comparable only within one space: same model, same crop contract, loose-pill photos
+        self.embedding_space_id = f"pill-crop:{self.version}:w{self.window:g}"
+        self.preprocess_version = f"crop-contract-1:window-{self.window:g}:crop-{CROP_SIZE}:input-{IMAGE_SIZE}"
         self.transform = eval_transform()
         self.batch_size = batch_size
 
@@ -38,7 +41,10 @@ class Embedder:
             emb = self.model(x.to(self.device))["embedding"]
         return emb.float().cpu().numpy()
 
+    def frame(self, image, boxes=None):
+        """A photo and optional boxes (x0, y0, x1, y1) -> crops by the crop contract; without boxes the photo is one."""
+        return [crop_window(image, b, self.window) for b in boxes] if boxes else [image]
+
     def embed_photo(self, image, boxes=None):
-        """A photo and optional boxes (x0, y0, x1, y1) -> embeddings; without boxes the photo is one framed crop."""
-        crops = [crop_window(image, b, self.window) for b in boxes] if boxes else [image]
-        return self(crops)
+        """A photo and optional boxes -> embeddings."""
+        return self(self.frame(image, boxes))

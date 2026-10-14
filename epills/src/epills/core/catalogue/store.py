@@ -31,6 +31,11 @@ CREATE INDEX ingredients_rxcui ON ingredients (rxcui);
 PRODUCT_COLUMNS = ["pill_id", "ndc9", "part", "parts", "ndc11", "name", "generic_name", "manufacturer", "shape",
                    "colour", "size_mm", "imprint", "imprint_type", "imprint_colour", "score", "rxcui", "rxnorm_name",
                    "rxnorm_status"]
+# imprint re-ranking in identify (imprint.match.rerank): the weight of the read imprint and how many of the closest
+# products it may reorder, chosen on C3PI validation photos against this catalogue by scripts/tune_identify_rerank.py
+# (2026-10-13, GPU reader large_c92). Held-out medicines: right product first 74.8% (0.3, 500, chosen earlier on the
+# ePillID benchmark) -> 80.2%, top 5 91.7% -> 94.4% (outputs/runs/stage2_run4/eval/identify_rerank_large_c92.json)
+IMPRINT_ALPHA, IMPRINT_TOP_K = 0.05, 100
 
 
 def imprint_tokens(text):
@@ -85,16 +90,28 @@ class Catalogue:
         rows = self.con.execute("SELECT pill_id, imprint, shape, colour FROM products").fetchall()
         self.attrs = {r["pill_id"]: (r["imprint"], r["shape"], r["colour"]) for r in rows}
         self.model_version = self.meta.get("model_version")
+        self._imprint_index = self._siblings = None
 
     def __len__(self):
         return len(self.attrs)
 
+    @property
+    def imprint_index(self):
+        """Every product's recorded imprint with its tokens' rarity (imprint.match.ImprintIndex), in product order."""
+        if self._imprint_index is None:
+            from epills.core.imprint.match import ImprintIndex
+            self._imprint_index = ImprintIndex([self.attrs[p][0] or "" for p in self.segment_pill])
+        return self._imprint_index
+
     # ---- identify ---------------------------------------------------------------------------------------------
-    def identify(self, queries, top_k=5, imprint=None, shape=None, colour=None):
+    def identify(self, queries, top_k=5, imprint=None, shape=None, colour=None, reads=None, alpha=None, rerank_k=None):
         """
         queries: (n, d) unit embeddings of one pill (e.g. front and back). Returns (candidates, notes): candidates =
-        [{pill_id, similarity, imprint_match}] best first. Filters (shape, colour, typed imprint) narrow the list;
-        when nothing passes a filter, it is dropped and the notes say so.
+        [{pill_id, similarity, imprint_match, imprint_read}] best first. Filters (shape, colour, typed imprint) narrow
+        the list; when nothing passes a filter, it is dropped and the notes say so. reads: the pill's imprint as read
+        by OCR (all rotations, both sides): re-ranks the closest products by how well their recorded imprint matches
+        (imprint.match.rerank, IMPRINT_ALPHA and IMPRINT_TOP_K unless alpha / rerank_k are given); imprint_read is
+        that match's strength, 0-1.
         """
         q = np.asarray(queries, np.float32)
         q = q / np.maximum(np.linalg.norm(q, axis=1, keepdims=True), 1e-12)
@@ -111,11 +128,18 @@ class Catalogue:
                 keep &= passed
             else:
                 notes.append(f"no catalogue pill matches {name} '{value}'; ignored")
+        score = per_product
+        if reads:
+            from epills.core.imprint.match import rerank
+            score = rerank(per_product[None], [reads], self.imprint_index, IMPRINT_ALPHA if alpha is None else alpha,
+                           IMPRINT_TOP_K if rerank_k is None else rerank_k)[0]
         idx = np.flatnonzero(keep)
-        idx = idx[np.argsort(-per_product[idx])][:top_k]
+        idx = idx[np.argsort(-score[idx])][:top_k]
+        read = self.imprint_index.scores(reads, idx) if reads else np.zeros(len(idx))
         return [{"pill_id": str(self.segment_pill[i]), "similarity": round(float(per_product[i]), 4),
-                 "imprint_match": bool(imprint and imprint_matches(imprint, self.attrs[self.segment_pill[i]][0]))}
-                for i in idx], notes
+                 "imprint_match": bool(imprint and imprint_matches(imprint, self.attrs[self.segment_pill[i]][0])),
+                 "imprint_read": round(float(r), 3)}
+                for i, r in zip(idx, read)], notes
 
     # ---- products -----------------------------------------------------------------------------------------------
     def product(self, pill_id):
@@ -129,6 +153,27 @@ class Catalogue:
             "SELECT n, kind FROM images WHERE pill_id = ? ORDER BY n", (pill_id,))]
         return out
 
+    def look_alike_strengths(self, pill_id):
+        """
+        Products with the same active ingredients in another strength or release form that share this one's recorded
+        shape and colour (test case M02): the photo can't tell them apart, so the strength needs the label.
+        """
+        if self._siblings is None:
+            from epills.core.catalogue.identity import product_identity
+            groups, self._siblings = {}, {}
+            for r in self.con.execute("SELECT pill_id, rxnorm_name, shape, colour FROM products"):
+                ings = frozenset(i["rxcui"] for i in self.con.execute(
+                    "SELECT rxcui FROM ingredients WHERE pill_id = ?", (r["pill_id"],)) if i["rxcui"])
+                if ings and r["shape"] and r["colour"]:
+                    ident = product_identity(r["rxnorm_name"])
+                    groups.setdefault((ings, r["shape"], r["colour"]), []).append(
+                        (r["pill_id"], ident["strength"], ident["release"]))
+            for members in groups.values():
+                for pid, strength, release in members:
+                    self._siblings[pid] = [{"pill_id": q, "strength": s, "release": rel} for q, s, rel in members
+                                           if (s, rel) != (strength, release) and s]
+        return self._siblings.get(pill_id, [])
+
     def image_file(self, pill_id, n):
         row = self.con.execute("SELECT file FROM images WHERE pill_id = ? AND n = ?", (pill_id, n)).fetchone()
         return self.folder / "images" / row["file"] if row else None
@@ -140,15 +185,23 @@ class Catalogue:
         or generic, typos tolerated): products with exactly those ingredients come first ("same"), then products
         that also contain others ("contains"); plain name matches fill in ("name"). Returns (products, resolution).
         """
+        from epills.core.label import INN_TO_US
+        us_names = INN_TO_US.get(" ".join(name.lower().split()), [])  # co-amoxiclav: RxNorm only knows US names
         resolution = {"query": name, "ingredients": [], "rxnorm": "not used"}
+        if us_names:
+            resolution["us_names"] = us_names
         ranked = {}
         if rxnorm is not None:
             try:
-                rxcui = rxnorm.rxcui_by_name(name)
-                if not rxcui:
-                    candidates = rxnorm.approximate(name)
-                    rxcui = candidates[0][0] if candidates else None
-                ingredients = rxnorm.ingredients(rxcui) if rxcui else []
+                if us_names:
+                    rxcuis = [rxnorm.rxcui_by_name(n) for n in us_names]
+                    ingredients = [i for r in rxcuis if r for i in rxnorm.ingredients(r)]
+                else:
+                    rxcui = rxnorm.rxcui_by_name(name)
+                    if not rxcui:
+                        candidates = rxnorm.approximate(name)
+                        rxcui = candidates[0][0] if candidates else None
+                    ingredients = rxnorm.ingredients(rxcui) if rxcui else []
                 resolution.update(rxnorm="ok" if ingredients else "no match",
                                   ingredients=[{"rxcui": r, "name": n} for r, n in ingredients])
             except Exception as error:  # offline: fall back to the names
@@ -165,10 +218,11 @@ class Catalogue:
                 for pid, ing in have.items():
                     if wanted <= ing:
                         ranked[pid] = "same" if ing == wanted else "contains"
-        like = f"%{name.strip()}%"
-        for r in self.con.execute("SELECT pill_id FROM products WHERE name LIKE ? OR generic_name LIKE ? "
-                                  "OR rxnorm_name LIKE ?", (like, like, like)):
-            ranked.setdefault(r["pill_id"], "name")
+        for n in [name.strip()] + us_names:
+            like = f"%{n}%"
+            for r in self.con.execute("SELECT pill_id FROM products WHERE name LIKE ? OR generic_name LIKE ? "
+                                      "OR rxnorm_name LIKE ?", (like, like, like)):
+                ranked.setdefault(r["pill_id"], "name")
         products = [self.product(pid) | {"match": how} for pid, how in ranked.items()]
         if strength:
             s = strength.lower().replace(" ", "")

@@ -11,3 +11,5 @@ torch>=2.6                # the Stage 2 model (CPU)
 torchvision>=0.21         # VGG16 and the input transform
 transformers>=4.45        # ViT-B/16
 opencv-python-headless>=4.10   # the stand-in pill finder (/v1/scan)
+pypdf>=5.0                # prescriptions as PDF: the text layer
+pypdfium2>=4.30           # scanned PDFs: pages rendered for the text reader

@@ -3,8 +3,9 @@ Monthly retraining on the verified pill photos users chose to share (docs/featur
 
 Runs on the desktop GPU (the free Space has none). Steps, run in order (each can be re-run on its own):
   pull     download the photos from the private dataset repo (EPILLS_FEEDBACK_REPO) -> data/feedback/<month>/
-  build    curate: pharmacist-checked labels (and user-confirmed ones with --include-user-confirmed); a known medicine
-           (NDC9 in our groups) joins its group, a new one becomes a new class; exact duplicates dropped; the newest
+  review   list the user-confirmed labels waiting for review; --approve / --reject item ids (blueprint B15)
+  build    curate: pharmacist-checked labels (and approved user-confirmed ones with --include-user-confirmed); a known
+           medicine (NDC9 in our groups) joins its group, a new one becomes a new class; exact duplicates dropped; the newest
            20% of each medicine's photos held out as this month's feedback test. Writes the manifest and the config.
   train    fine-tune the served run on it (its weights and ArcFace table; phase 2, gentle learning rate 1e-5)
   check    calibrate (crop window on validation), run the same test sets as the served model plus this month's
@@ -63,12 +64,38 @@ def pull(p):
     print(f"pulled {sum(1 for _ in p['raw'].rglob('*.jpg')):,} photos -> {p['raw']}")
 
 
+def reviews_of(p):
+    f = p["raw"] / "reviews.json"
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+
+
+def review(p, approve, reject):
+    """User-confirmed labels wait for a person's review (blueprint B15): list them, or record decisions."""
+    decisions = reviews_of(p)
+    for items, decision in ((approve, "approved"), (reject, "rejected")):
+        for item in filter(None, (items or "").split(",")):
+            decisions[item.strip()] = {"decision": decision,
+                                       "at": datetime.datetime.now().isoformat(timespec="seconds")}
+    (p["raw"] / "reviews.json").write_text(json.dumps(decisions, indent=1), encoding="utf-8")
+    pending = [m for m in (json.loads(f.read_text(encoding="utf-8")) for f in sorted(p["raw"].rglob("*.json"))
+                           if f.name != "reviews.json")
+               if m.get("label_source") == "user_confirmed" and m.get("item") not in decisions]
+    for m in pending:
+        print(f"{m['item']}  {m['medication_name']!r}  app said {m.get('app_decision')}  "
+              f"photo {next(p['raw'].rglob(m['item'] + '.jpg'), '?')}")
+    print(f"{len(pending)} pending; {sum(d['decision'] == 'approved' for d in decisions.values())} approved, "
+          f"{sum(d['decision'] == 'rejected' for d in decisions.values())} rejected")
+
+
 def build(p, served, include_user):
-    items = []
+    items, approved = [], {k for k, d in reviews_of(p).items() if d["decision"] == "approved"}
     for meta_file in sorted(p["raw"].rglob("*.json")):
+        if meta_file.name == "reviews.json":
+            continue
         m = json.loads(meta_file.read_text(encoding="utf-8"))
         jpg = meta_file.with_suffix(".jpg")
-        if jpg.exists() and (m["label_source"] == "pharmacist" or (include_user and m["label_source"] == "user_confirmed")):
+        user_ok = include_user and m["label_source"] == "user_confirmed" and m.get("item") in approved
+        if jpg.exists() and (m["label_source"] == "pharmacist" or user_ok):
             items.append({**m, "jpg": jpg, "sha1": hashlib.sha1(jpg.read_bytes()).hexdigest()})
     if not items:
         sys.exit("no usable feedback photos this month")
@@ -199,13 +226,15 @@ def publish(new_run, user):
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # the report has arrows; logs on Windows are cp1252
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("steps", nargs="+", choices=["pull", "build", "train", "check", "publish"])
+    parser.add_argument("steps", nargs="+", choices=["pull", "review", "build", "train", "check", "publish"])
     parser.add_argument("--from-run", type=Path,
                         help="the served run (default: outputs/serving/served_run.txt); for publish: the approved run")
     parser.add_argument("--month", default=MONTH)
     parser.add_argument("--user", help="Hugging Face user (publish)")
     parser.add_argument("--include-user-confirmed", action="store_true",
-                        help="also train on labels the user confirmed (default: pharmacist-checked only)")
+                        help="also train on labels the user confirmed and a person approved (review)")
+    parser.add_argument("--approve", help="review: comma-separated item ids to approve")
+    parser.add_argument("--reject", help="review: comma-separated item ids to reject")
     parser.add_argument("--smoke", action="store_true", help="train for a few batches only (testing the pipeline)")
     args = parser.parse_args()
     if args.from_run is None:
@@ -222,6 +251,8 @@ def main():
         return
     if "pull" in args.steps:
         pull(p)
+    if "review" in args.steps:
+        review(p, args.approve, args.reject)
     if "build" in args.steps:
         build(p, served, args.include_user_confirmed)
     if "train" in args.steps:

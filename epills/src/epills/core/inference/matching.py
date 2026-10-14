@@ -58,3 +58,40 @@ def decide(queries, embeddings_by_id, threshold, margin=0.0):
             verdict = "match"
         out.append(Decision(ids[best], s1, ids[second] if second is not None else None, s2, verdict))
     return out
+
+
+def check_imprint(d, hits, imprinted, threshold, distinct_hits=None):
+    """
+    The imprint read on the pill checks a Decision. hits: medication ids whose recorded imprint was read on the pill
+    (imprint.match.read_hits); imprinted: ids that have a recorded imprint; distinct_hits (optional): the same, counting
+    only tokens that tell the gallery's medications apart (read_hits distinct=True).
+      match, its own imprint read                     -> match      ("confirmed")
+      match, only other medications' imprints read    -> ambiguous  ("conflict": photograph the pill again)
+      ambiguous, exactly one of the two closest read  -> match on it ("resolved"; on the runner-up only if it passes
+                                                         the threshold)
+    With distinct_hits, a match is confirmed or contradicted by distinct tokens only: reading 'TV' on a pill that looks
+    like the patient's 'TV;7295' no longer confirms it next to their 'TV;58', and reading '58' makes it a conflict
+    (blueprint B27). It can only turn a match into "photograph again"; ties are settled as before.
+    An imprint never turns an unknown pill into a match ("not_used"). Other statuses: "not_checked" (no recorded
+    imprints in the gallery), "not_read" (none of them read), "unresolved" (the read doesn't tell them apart).
+    Returns (Decision, status).
+    """
+    if not imprinted:
+        return d, "not_checked"
+    if d.decision == "unknown":
+        return d, "not_used"
+    if not hits:
+        return d, "not_read"
+    best, second = d.medication_id, d.runner_up_id
+    if d.decision == "match":
+        confirm = hits if distinct_hits is None else distinct_hits
+        if best in confirm:
+            return d, "confirmed"
+        if best not in hits or confirm:  # another's imprint read (any token), or another's distinct token
+            return Decision(best, d.similarity, second, d.runner_up_similarity, "ambiguous"), "conflict"
+        return d, "unresolved"  # its own imprint read, but only a token the medications share
+    if best in hits and second not in hits:
+        return Decision(best, d.similarity, second, d.runner_up_similarity, "match"), "resolved"
+    if second in hits and best not in hits and d.runner_up_similarity >= threshold:
+        return Decision(second, d.runner_up_similarity, best, d.similarity, "match"), "resolved"
+    return d, "unresolved"
