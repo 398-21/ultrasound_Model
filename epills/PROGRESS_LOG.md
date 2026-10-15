@@ -29,7 +29,7 @@ weak on other phones and conditions).
 | P7 Stage 3 safety engine | DDInter + RxNorm rules, dose checks, openFDA | 🟡 built and tested 2026-10-08 | Pharmacist or supervisor review of the wording | You |
 | P8 Imprint OCR | TrOCR tie-breaker (stretch goal) | ⬜ optional | — | — |
 | P9 Write-up | Report, tables, figures | ⬜ last | — | You; Claude drafts |
-| P10 API and hosting | FastAPI on Hugging Face Spaces (free) | ✅ live: https://davidpansx-pharmascan-api.hf.space, API 0.9.0 since 13 Oct (free ZeroGPU Space; `/docs`, demo `/ui`); the Space's token is read-only | Share docs/API.md and docs/evidence.md with the team | You |
+| P10 API and hosting | FastAPI on Hugging Face Spaces (free) | ✅ live: https://davidpansx-pharmascan-api.hf.space, API 0.10.0 since 15 Oct (free ZeroGPU Space; `/docs`, demo `/ui`); the Space's token is read-only | Share docs/API.md and docs/evidence.md with the team | You |
 
 **Up next, in order:**
 1. Choose the model to serve: run 3 (best in C3PI conditions) or run 4 (better on other phones, safer there).
@@ -97,6 +97,43 @@ Note on older entries: before 2026-10-07 (night) the cropper lived in `src/epill
 `src/epills/training/datasets/`. Their "Next" lists are history; the current plan is the table above.
 
 ---
+
+## 2026-10-15: /v1/read-label reads Singapore dispensing stickers (API 0.10.0)
+
+- **Your teammate's request:** read the pharmacy sticker on the bag or box and return its parts in a fixed format.
+- Per medicine, `fields` now has: `quantity` with `amount` and `unit`; `instructions` parsed into dose (amount, range,
+  unit), times a day (also BD/TDS/QDS/OD/OM/ON), every N hours, as needed (PRN), time of day, food (before / after /
+  with / with or without / empty stomach), duration and daily maximum; `indication` (what it is for, as printed);
+  `cautions`; dates. The response has `label_kind` (dispensing / package / none). Older fields kept.
+- Rules kept: printed, never inferred (a part that isn't printed is null; "every 8 hours" isn't turned into times a
+  day); lines with the patient's name or NRIC are never used. New: names in caution lines ("Avoid grapefruit juice")
+  aren't taken as medicines; an explicit "Qty:" counts on the name's line or just above it (tilted photos).
+- Checked: 9 new test cases (`tests/test_label.py`, `tests/test_serving.py`); four rendered Singapore-style stickers,
+  clean and photo-like, read through the real reader (`scripts/check_dispensing_labels.py`): every part right; the
+  one gap is a date printed on the patient's name line (withheld on purpose). Not yet tested on real phone photos of
+  real stickers (B8). 90 tests pass. docs/API.md (`/v1/read-label` rewritten), features.md (F8), evidence.md (P01).
+- **Deployed 0.10.0 (15 Oct, 12:05; the Space kept its read-only token).** Live checks: `/v1/model-info` serves all
+  10 rate sets (incl. the CPU path); both photo-like stickers read correctly on the live API, no patient name
+  returned.
+- **Fix found by your test (redeployed 12:17):** the `/docs` page sends the placeholder `string` for every optional
+  text box left alone, which the API took as a value (`422` on read-label; on identify a filter for imprint
+  "string"). Such boxes, and empty ones, now count as not sent (`given()` in main.py; tested). Also more wordings
+  for instructions: "Sig:", "Dosage:", "2x/day".
+- **MOH's guide as the standard** (`docs/know-about-medication-label_eng.pdf`, your request). Its example label,
+  cut from the poster, reads completely: Nifedipine LA 60 mg, 30 tablets, 1 tablet once every morning, with or
+  without food, for blood pressure (handwritten), swallow whole, 10/08/2021, the pharmacy; no name or NRIC.
+  **Safety bug found and fixed:** release markers (LA, SR, XR, XL, CR, MR, EC...) were ignored, so the long-acting
+  nifedipine matched the ordinary tablet in RxNorm. Now `release` is returned and the product must have it (the
+  RxNorm search is phrased as RxNorm names products, then plainly); otherwise only the ingredient code. Also:
+  NRIC/FIN lines (masked too) never used and a date beside them comes back alone; cautions grouped as MOH does
+  (`kind`: storage, side_effect, how_to_take, warning); `dispensed_by`. 92 tests pass.
+- **Real sticker formats:** the reader doesn't need a fixed layout (it recognises each part by its wording), but the
+  test stickers were our approximation; real polyclinic photos are still the open test (B8). Risks: a local brand
+  name RxNorm doesn't know (then nothing is returned), a morning/noon/night grid instead of a sentence, non-English
+  lines.
+- Was it in the blueprint? Partly: it asked to read pharmacy labels for name, strength, dose form and the
+  directions as written (done 12-13 Oct, B7). The parsed instructions, indication, cautions and quantity as a
+  number are your teammate's extension (15 Oct).
 
 ## 2026-10-14: reader v2 decided; the CPU path checked
 

@@ -53,7 +53,7 @@ from epills.core.imprint.ocr import GPU_MODEL
 from epills.core.inference.matching import check_imprint, decide
 from epills.core.inference.input_type import MESSAGES as INPUT_MESSAGES, classify_input
 from epills.core.inference.pill_finder import detect_pills
-from epills.core.label import STRENGTH, compare_with_list, document_fields
+from epills.core.label import STRENGTH, compare_with_list, dispensed_by, document_fields
 from epills.core.inference.preprocess import WINDOW, crop_window
 from epills.core.safety import openfda
 from epills.core.safety.db import SafetyDB
@@ -62,7 +62,7 @@ from epills.core.safety.rxnorm import RxNormClient, RxNormError
 from serving.app import evidence, schemas as S
 from serving.app.vision import Vision
 
-API_VERSION = "0.9.0"
+API_VERSION = "0.10.0"
 STARTED_AT = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
 LOCAL = {"safety_db": Path("data/processed/safety/safety.sqlite"),
          "embedder": Path("outputs/serving/stage2_model.pt"),
@@ -336,6 +336,11 @@ async def read_image(upload):
         return ImageOps.exif_transpose(image).convert("RGB")  # phone photos carry their rotation in EXIF
     except (UnidentifiedImageError, OSError) as error:
         raise HTTPException(422, f"{upload.filename or 'image'} is not a readable image: {error}")
+
+
+def given(value):
+    """An optional form field as sent; None when left empty or at the /docs page's placeholder "string"."""
+    return None if value is None or value.strip() in ("", "string") else value
 
 
 def parse_json(text, what):
@@ -615,6 +620,7 @@ async def embed(image: UploadFile = File(description="A pill crop, or a photo wi
     gallery, with the model version) and before `/v1/match`. Without a box, the image must already be framed like a
     crop: the pill in the middle, its long side about 70% of the image.
     """
+    box = given(box)
     emb = asset("embedder")
     photo = await read_image(image)
     b = parse_box(box)
@@ -685,6 +691,7 @@ async def identify(images: list[UploadFile] = File(description="One pill: 1 phot
     **What is this pill?** Photo(s) of one pill -> the most alike pills in the catalogue, with names and pictures.
     Typing the imprint narrows the list a lot. Always possible matches, never a confirmed identity.
     """
+    boxes, imprint, shape, colour = map(given, (boxes, imprint, shape, colour))
     if not 1 <= len(images) <= 2:
         raise HTTPException(422, "send 1 or 2 photos of the same pill")
     emb = asset("embedder")
@@ -798,6 +805,8 @@ async def scan(image: UploadFile = File(description="A full photo of the pills")
     flags and its visual decision (with the patient's gallery) or catalogue candidates (without one). Not a dose
     verification: the main backend decides with the regimen. Boxes flagged by the finder are not counted.
     """
+    boxes, gallery, schedule, model_version, embedding_space_id = map(
+        given, (boxes, gallery, schedule, model_version, embedding_space_id))
     emb = asset("embedder")
     photo = await read_image(image)
     early = input_check(input_type, check_input)
@@ -889,14 +898,18 @@ async def read_label(image: UploadFile = File(description="A photo of a medicine
                                                                       "medications, [{id, name, rxcui?, strength?}]: "
                                                                       "each medicine read is compared with it")):
     """
-    **Which medicine is on this box, label or prescription?** Reads the printed text and finds the medicine names in
-    it (RxNorm's ingredient and brand names, international names such as paracetamol too), with strength,
-    ingredients, RxNorm code, and what is printed about each (directions, quantity, dose form, dates), every value
-    with the line it was read from and `null` when not printed (blueprint B7). With `medications`, each medicine is
-    compared with the patient's list: same medicine, different strength, or not on the list (B9). Send a confirmed
+    **What does the pharmacy sticker say?** Made for Singapore dispensing labels (the sticker on the medicine bag or
+    box), also reads prescriptions and manufacturer boxes. Per medicine: name, strength per unit, ingredients and
+    RxNorm code; the quantity supplied (amount and unit); the instructions parsed into dose, times a day or every N
+    hours, as needed, time of day, before/after food, duration and daily maximum; what it is for; cautions; dispensing
+    and expiry dates. Every value comes with the line it was read from and is `null` when not printed, never inferred
+    (blueprint B7). `label_kind` says whether it is a dispensing label (instructions for the patient) or a package.
+    With `medications`, each medicine is compared with the patient's list: same medicine, different strength, or not
+    on the list (B9). Send a confirmed
     candidate to `/v1/safety/medications` as `{"id", "name", "rxcui"}`. Always ask the user to confirm.
     Nothing is stored; only the lines that name or describe a medicine are returned (labels show the patient's name).
     """
+    medications = given(medications)
     data = await image.read()
     reader = asset("reader")
     if data[:5] == b"%PDF-" or (image.filename or "").lower().endswith(".pdf"):
@@ -926,7 +939,12 @@ async def read_label(image: UploadFile = File(description="A photo of a medicine
                 c["list_check"] = compare_with_list(c, listed)
     except RxNormError as error:
         raise HTTPException(502, f"RxNorm didn't answer: {error}")
-    result = {"candidates": candidates, "note": LABEL_NOTE, "ocr_model": ocr_model, "source": source}
+    kind = ("none" if not candidates else
+            "dispensing" if any(c["fields"]["instructions"] or c["fields"]["quantity"] for c in candidates) else
+            "package")
+    result = {"candidates": candidates, "label_kind": kind, "dispensed_by": dispensed_by(lines, candidates),
+              "note": LABEL_NOTE, "ocr_model": ocr_model,
+              "source": source}
     if not candidates:
         result["message"] = ("No medicine name found. Photograph the label closer, straight on and in good light, "
                              "or type the name.")
@@ -1014,6 +1032,7 @@ async def feedback(image: UploadFile = File(description="The pill: a crop, or a 
     Only the pill crop and its label are stored, never the full photo. Use it when a pharmacist has checked a pill,
     or the user confirmed what a pill is (e.g. after an "unknown" or a wrong match).
     """
+    box, ndc, rxcui, app_decision, app_medication_id = map(given, (box, ndc, rxcui, app_decision, app_medication_id))
     if not consent:
         raise HTTPException(422, "consent must be true: only photos the user agreed to share are stored")
     store = asset("feedback")

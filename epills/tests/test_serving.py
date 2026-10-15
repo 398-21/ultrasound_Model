@@ -540,6 +540,16 @@ def test_read_label_gives_printed_fields_and_compares_with_the_list(stage2):
     assert c["fields"]["quantity"]["value"] == "60 tablets" and c["fields"]["expiry_date"] is None
     assert c["list_check"]["status"] == "different_strength" and c["list_check"]["medication_id"] == "m1"
     assert "MR A TAN" not in json.dumps(body)  # the patient's name never comes back
+    i = c["fields"]["instructions"]  # the sticker's parts, structured
+    assert body["label_kind"] == "dispensing" and c["fields"]["quantity"]["amount"] == 60
+    assert (i["dose"]["amount"], i["dose"]["unit"], i["times_per_day"], i["food"]) == (1, "tablet", 2, "after_food")
+    assert c["fields"]["cautions"] == [] and c["fields"]["indication"] is None  # not printed: empty, never guessed
+    for left in ("string", ""):  # what the /docs page sends for a box left alone: treated as not sent
+        same = client.post("/v1/read-label", files={"image": ("p.png", photo)}, data={"medications": left})
+        assert same.status_code == 200 and same.json()["candidates"][0]["list_check"] is None
+    docs = client.post("/v1/identify", files=[("images", ("p.png", png(Image.new("RGB", (64, 64), RED))))],
+                       data={"boxes": "string", "imprint": "string", "shape": "string", "colour": "string"})
+    assert docs.status_code == 200 and docs.json()["candidates"][0]["pill_id"] == "R_1"
     pdf = text_pdf(["EXAMPLE CLINIC", "GLUCOPHAGE 500MG TABLET", "Take 1 tablet daily"])
     body = client.post("/v1/read-label", files={"image": ("rx.pdf", pdf, "application/pdf")}).json()
     assert body["source"] == "pdf_text" and body["candidates"][0]["list_check"] is None

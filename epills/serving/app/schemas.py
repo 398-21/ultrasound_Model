@@ -304,9 +304,45 @@ class Printed(Out):
     line: str = Field(description="The line(s) it was read from")
 
 
+class Dose(Out):
+    amount: float = Field(description="Per dose, e.g. 1, 0.5")
+    amount_max: float | None = Field(None, description="For a range: 'Take 1-2 tablets' -> 2")
+    unit: str | None = Field(None, description="tablet, capsule, ml, puff, drop, sachet, ...")
+
+
+class Instructions(Out):
+    text: str = Field(description="As printed, e.g. 'Take ONE tablet TWICE a day AFTER FOOD'")
+    line: str = Field(description="The line(s) it was read from")
+    dose: Dose | None = None
+    times_per_day: int | None = Field(None, description="Only when printed ('twice a day', 'BD', 'daily')")
+    every_hours: float | None = Field(None, description="'every 6 hours'; never turned into times a day")
+    as_needed: bool = Field(False, description="'when necessary', 'as needed', 'PRN'")
+    times_of_day: list[Literal["morning", "afternoon", "evening", "night", "bedtime"]] = []
+    food: Literal["before_food", "after_food", "with_food", "with_or_without_food", "empty_stomach"] | None = None
+    duration: str | None = Field(None, description="'7 days'")
+    max_per_day: str | None = Field(None, description="'8 tablets in 24 hours'")
+
+
+class Caution(Printed):
+    kind: Literal["storage", "side_effect", "how_to_take", "warning"] = Field(
+        "warning", description="As MOH's 'Know about medication label' groups them: store your medication, manage "
+                               "common side-effects, how to take it; anything else is a warning")
+
+
+class Quantity(Printed):
+    amount: float | None = Field(None, description="e.g. 60")
+    unit: str | None = Field(None, description="e.g. tablet, capsule, ml")
+
+
 class DocumentFields(Out):
     directions: Printed | None = Field(None, description="As printed, e.g. 'Take 1 tablet twice a day after meals'")
-    quantity: Printed | None = None
+    instructions: Instructions | None = Field(None, description="The directions, parsed into their parts; a part "
+                                                                "that isn't printed is null")
+    indication: Printed | None = Field(None, description="What the medicine is for, as printed ('For high blood "
+                                                         "pressure' -> 'high blood pressure')")
+    cautions: list[Caution] = Field([], description="Cautionary notes as printed ('May cause drowsiness', 'Avoid "
+                                                    "alcohol', 'Swallow whole'), each with its kind")
+    quantity: Quantity | None = Field(None, description="Total supplied, e.g. 'Qty: 60 TAB' -> 60 tablet")
     dose_form: Printed | None = None
     date: Printed | None = Field(None, description="Dispensing or prescription date, as printed")
     expiry_date: Printed | None = None
@@ -323,6 +359,10 @@ class LabelCandidate(Out):
     brand: str | None
     ingredients: list[Ingredient]
     strength: str | None
+    release: Literal["ER", "DR"] | None = Field(None, description="Extended or delayed release, when printed (LA, SR, "
+                                                                 "XR, XL, CR, MR, EC, ...); the RxNorm product always "
+                                                                 "has this release, or none is given")
+    release_printed: str | None = Field(None, description="The release marker as printed, e.g. 'LA'")
     rxcui: str | None
     rxnorm_name: str | None
     found_in: list[str] = Field(description="Only the lines that name the medicine")
@@ -334,6 +374,10 @@ class LabelCandidate(Out):
 
 class ReadLabelResponse(Out):
     candidates: list[LabelCandidate]
+    label_kind: Literal["dispensing", "package", "none"] = Field(
+        "none", description="dispensing: a pharmacy sticker or prescription with instructions for the patient; "
+                            "package: a manufacturer's box or bottle (no instructions); none: no medicine found")
+    dispensed_by: Printed | None = Field(None, description="The dispensing pharmacy or clinic as printed")
     note: str
     ocr_model: str
     source: Literal["photo", "pdf_text", "pdf_scan"] = "photo"

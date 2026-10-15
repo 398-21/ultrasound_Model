@@ -206,7 +206,19 @@ GPU, with the CPU as fallback.
     81.46%. Counting only distinct parts everywhere (also to settle ties) was measured and rejected: it accepted more
     pills that aren't the patient's (`imprint_gallery_large_c92_distinct_all.json`).
 
-## F8. Box and label reading (built 2026-10-12, API 0.5.0)
+## F8. Box and label reading (built 2026-10-12, API 0.5.0; Singapore dispensing stickers 2026-10-15, API 0.10.0)
+- **15 Oct (your teammate's request):** the main job is now the pharmacy sticker on the bag or box. Per medicine:
+  quantity as amount + unit; the instructions parsed into dose, times a day (also BD/TDS/QDS/OD/OM/ON), every N
+  hours, as needed (PRN), time of day, before/after/with food, duration, daily maximum; what it is for ("For
+  diabetes"); cautions; dates; and `label_kind` (dispensing / package). Printed, never inferred; personal lines
+  never used; names in caution lines ("Avoid grapefruit juice") aren't taken as medicines. Checked on four
+  rendered stickers (clean and photo-like) with the real reader; real phone photos still to test (B8).
+- **MOH's guide as the standard (15 Oct):** `docs/know-about-medication-label_eng.pdf`. Its example label (a real
+  MOH-designed image: "NIFEDIPINE LA 60MG TAB (30 TAB)", handwritten "for blood pressure", unlabelled patient
+  name and masked NRIC) reads completely. Found and fixed: the release form (LA, SR, XR, XL, CR, MR, EC...) was
+  ignored, so long-acting nifedipine matched the ordinary tablet; now the RxNorm product must have the printed
+  release, else only the ingredient code is given. Also: NRIC/FIN lines (also masked) never used, a date beside
+  them comes back alone; cautions get MOH's kinds (storage, side effect, how to take, warning); `dispensed_by`.
 For medicines the pill catalogue doesn't have (e.g. Singapore-only brands), and to add a medication without typing.
 - `POST /v1/read-label` (photo of a manufacturer's box *or* a pharmacy dispensing label): the same Florence-2 model
   reads the lines of text (OCR with regions), then `src/epills/core/label.py` finds the medicines in them:

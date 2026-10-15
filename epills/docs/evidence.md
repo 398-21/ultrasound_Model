@@ -6,7 +6,7 @@ result. It answers the team's test plan (docs/api_review_and_test_plan.md) and t
 itself reports the main ones at `GET /v1/model-info` → `error_rates`, each with its source file.
 
 - **Live API:** https://davidpansx-pharmascan-api.hf.space (`/docs` to try every call, `/ui` demo page).
-- **Version:** API 0.9.0, model `stage2_run4@2026-10-09` (run 4).
+- **Version:** API 0.10.0, model `stage2_run4@2026-10-09` (run 4).
 - **Scope:** the API is stateless and gives *visual evidence* ("looks like"). The main app's backend owns patient
   data, regimens and the dose decision (docs/dose_rules.md). No real patient data was used; the demo patient is
   synthetic.
@@ -17,7 +17,8 @@ From the `epills` folder (Windows, Python 3.13 venv):
 
 | What | Command | Result |
 |---|---|---|
-| Unit and contract tests | `.venv\Scripts\python -m pytest tests` | 87 pass (`outputs/evidence/pytest.txt`) |
+| Unit and contract tests | `.venv\Scripts\python -m pytest tests` | 92 pass (`outputs/evidence/pytest.txt`) |
+| Singapore dispensing stickers (P01) | `.venv\Scripts\python scripts\check_dispensing_labels.py` | `outputs/evidence/dispensing_labels/` (rendered stickers and what was read) |
 | The blueprint's first slice, end to end | `.venv\Scripts\python scripts\demo_first_slice.py [--base <URL>]` | `outputs/evidence/first_slice_trace.json` |
 | Pill counting (D01, D02) | `scripts\evaluate_pill_finder.py` | `outputs/eval/pill_finder.json` |
 | Gallery matching (M01, M03) | `scripts\evaluate_imprint_gallery.py --run outputs\runs\stage2_run4 --ocr large_c92` | `outputs/runs/stage2_run4/eval/imprint_gallery_large_c92_distinct.json` |
@@ -42,7 +43,7 @@ medicines; MEDISEG for other phones). Settings were chosen on validation; the te
 | M03 | Pill not in the gallery: unknown or ambiguous | ✅ measured | Pills that aren't the patient's: called unknown 94.8%, accepted as one of theirs 3.5% |
 | I01 | C3PI ground truth with imprint: top-k measured | ✅ measured | Held-out medicines (2,285 photos, 214 products): right product first 80.2%, top 5 94.4%, top 20 97.8% (look alone: 71.6%, 91.7%). With the pill's own imprint read: first 92.9%; without: 68.6% |
 | I02 | Unknown US or non-US pill: candidates never claimed as verified | ✅ measured | 800 MEDISEG pills (Hong Kong, not in the catalogue): `no_confident_match` 70%, `possible_match` 7%. Every answer is "possible matches" with a note; `confidence` is calibrated, the raw similarity is labelled "not a probability" |
-| P01 | Printed box or label: text with field provenance and user review | ✅ on printed examples | `/v1/read-label`: each field with its source line, `null` when not printed, never inferred; PDFs too. `tests/test_label.py`. **Real phone photos not yet tested** (job B8) |
+| P01 | Printed box or label: text with field provenance and user review | ✅ on MOH's example label and rendered stickers | `/v1/read-label` follows MOH's "Know about medication label": what (name, strength, release), how much / how often / when (instructions in parts), storage and side effects (caution kinds), why (indication), quantity, dates, dispensing pharmacy; each with its source line, `null` when not printed; patient name and NRIC never returned. MOH's own example label and four rendered stickers read correctly (`scripts/check_dispensing_labels.py`, `tests/test_label.py`). **Real phone photos of real stickers not yet tested** (job B8) |
 | P02 | Clear unprinted blister: no pill match | ✅ abstains | Input check: 7 of 8 blister photos refused (small set; a net, not a guarantee); the user's stated `input_type` comes first |
 | P03 | Opaque foil: ask for the source, abstain | ⚠ partly | Declared foil or blister abstains; the automatic check missed the one foil-back photo. The agent asks the user what the photo shows first (`route_medication_image`) |
 | R01–R04 | Stopped regimens, duplicate reports, no photo, "unsure" | Backend (app) | Spec and test cases for the backend: docs/dose_rules.md items 2, 4, 5, 6; the API keeps vision and intake apart (`vision_status`, `intake_status` in the first-slice trace) |
@@ -106,4 +107,4 @@ medicines; MEDISEG for other phones). Settings were chosen on validation; the te
 
 - docs/blueprint_review.md: the blueprint review, jobs B1–B27 and their results by stage.
 - PROGRESS_LOG.md: every working session, decisions and measurements, newest first.
-- tests/: 87 tests, including contract tests for every endpoint.
+- tests/: 92 tests, including contract tests for every endpoint.

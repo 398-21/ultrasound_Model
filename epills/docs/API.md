@@ -34,7 +34,7 @@ Everything the web page can call, with examples. The live, clickable version of 
 | User does | Call |
 |---|---|
 | Adds a medication (name, photos) | `POST /v1/safety/medications` (whole list), then `POST /v1/embed` per enrolment photo (3–5 photos, both sides). Keep the pill's `imprint` (from `/v1/pills/search`) with the gallery |
-| Adds a medicine from its box, pharmacy label or prescription (photo or PDF) | `POST /v1/read-label` (with the current list as `medications`), the user confirms the medicine and the printed directions, then `POST /v1/safety/medications` |
+| Adds a medicine from its pharmacy sticker (or prescription, or box; photo or PDF) | `POST /v1/read-label` (with the current list as `medications`): medicine, strength, quantity, instructions in parts (dose, times a day, food), what it is for, cautions. The user confirms them, then `POST /v1/safety/medications` |
 | Checks a box or label at dose time | `POST /v1/read-label` with `medications`: `list_check` says same medicine / different strength / not on the list |
 | Checks a dose (one photo of the pills) | `POST /v1/detect` (boxes; check `count_reliable`), `POST /v1/embed` per pill (with its box), `POST /v1/match` with the gallery; the **backend** applies the dose rules (docs/dose_rules.md). `POST /v1/scan` does the visual part in one call |
 | Sends a photo and it isn't clear what it shows | `POST /v1/check-input`: loose pills, blister, box, label or document, and the tools that fit |
@@ -49,7 +49,7 @@ Everything the web page can call, with examples. The live, clickable version of 
 
 ### `GET /health`
 ```json
-{"status": "ok", "ready": true, "api_version": "0.9.0", "started_at": "2026-10-13T06:10:00+00:00",
+{"status": "ok", "ready": true, "api_version": "0.10.0", "started_at": "2026-10-13T06:10:00+00:00",
  "model": {"loaded": true, "version": "stage2_run4@2026-10-09",
            "embedding_space_id": "pill-crop:stage2_run4@2026-10-09:w1.55", "device": "zerogpu", "error": null},
  "catalogue": {"loaded": true, "products": 4936, "model_version": "stage2_run4@2026-10-09", "error": null},
@@ -339,40 +339,94 @@ for another photo rather than guessing; enrol photos of both sides.
 One product (same fields as above), and its pictures as JPEG: `rximage` (both sides with a mm ruler),
 `reference` (studio), `photo` (everyday). Use the `url` values directly in `<img src="BASE_URL + url">`.
 
-### `POST /v1/read-label`: which medicine is on this box, label or prescription?
-Multipart form: `image` (a photo of a medicine box, a pharmacy dispensing label or a prescription, close up and
-straight on, **or a PDF**), optional `medications` (JSON string: the patient's list, `[{"id", "name", "rxcui"?,
-"strength"?}]`).
+### `POST /v1/read-label`: what does the pharmacy sticker say?
+Made for **Singapore dispensing labels**: the sticker the pharmacy or polyclinic puts on the medicine bag or box.
+It also reads prescriptions (photo or PDF) and manufacturer boxes. Multipart form: `image` (a photo of the sticker,
+close up and straight on, **or a PDF**), optional `medications` (JSON string: the patient's list,
+`[{"id", "name", "rxcui"?, "strength"?}]`).
+
+We follow MOH's guide **"Know about medication label"** (`docs/know-about-medication-label_eng.pdf`) as the
+standard. Its example label
+
+```
+KEEP AWAY FROM CHILDREN
+NIFEDIPINE LA 60MG TAB                    (30 TAB)
+TAKE 1 TABLET ONCE EVERY MORNING
+May be taken with or without food.
+Swallow the tablet whole. Do not crush or chew.
+                     for blood pressure          (handwritten by the pharmacist)
+TAN AH SENG
+SXXXX123A                              10/08/2021
+KNOW YOUR MEDICINE GENERAL HOSPITAL PHARMACY
+MEDICINE ROAD S(123456) TEL:12345678
+```
+
+comes back as (shortened; each `line` is where the value was read)
+
 ```json
-{"candidates": [{"name": "Paracetamol 500 mg", "brand": null, "strength": "500 mg",
-                 "ingredients": [{"rxcui": "161", "name": "acetaminophen"}],
-                 "rxcui": "198440", "rxnorm_name": "acetaminophen 500 MG Oral Tablet",
-                 "found_in": ["PARACETAMOL 500MG TABLET"], "first_line": 3,
-                 "fields": {"directions": {"value": "Take 2 tablets 4 times a day when necessary for pain or fever",
-                                           "line": "Take 2 tablets 4 times a day / when necessary for pain or fever"},
-                            "quantity": {"value": "20 tab", "line": "Qty: 20 TAB"},
-                            "dose_form": {"value": "tablet", "line": "PARACETAMOL 500MG TABLET"},
-                            "date": {"value": "12/10/2026", "line": "12/10/2026"}, "expiry_date": null},
-                 "list_check": {"status": "not_on_list", "medication_id": null,
-                                "message": "This medicine isn't on your list. Check with your pharmacist."}}],
+{"label_kind": "dispensing",
+ "dispensed_by": {"value": "KNOW YOUR MEDICINE GENERAL HOSPITAL PHARMACY", "line": "..."},
+ "candidates": [{"name": "Nifedipine LA 60 mg", "strength": "60 mg", "release": "ER", "release_printed": "LA",
+                 "ingredients": [{"rxcui": "7417", "name": "nifedipine"}],
+                 "rxcui": "198035", "rxnorm_name": "24 HR nifedipine 60 MG Extended Release Oral Tablet",
+                 "found_in": ["NIFEDIPINE LA 60MG TAB"],
+                 "fields": {
+                   "quantity": {"value": "30 tab", "amount": 30, "unit": "tablet", "line": "(30 TAB)"},
+                   "instructions": {"text": "TAKE 1 TABLET ONCE EVERY MORNING May be taken with or without food.",
+                                    "line": "...", "dose": {"amount": 1, "amount_max": null, "unit": "tablet"},
+                                    "times_per_day": 1, "every_hours": null, "as_needed": false,
+                                    "times_of_day": ["morning"], "food": "with_or_without_food",
+                                    "duration": null, "max_per_day": null},
+                   "indication": {"value": "blood pressure", "line": "for blood pressure"},
+                   "cautions": [{"value": "KEEP AWAY FROM CHILDREN", "kind": "storage", "line": "..."},
+                                {"value": "Swallow the tablet whole. Do not crush or chew.", "kind": "how_to_take",
+                                 "line": "..."}],
+                   "dose_form": {"value": "tablet", "line": "..."},
+                   "date": {"value": "10/08/2021", "line": "10/08/2021"}, "expiry_date": null,
+                   "directions": {"value": "TAKE 1 TABLET ONCE EVERY MORNING May be taken ...", "line": "..."}},
+                 "list_check": null}],
  "note": "Medicines read from the photo. Check the name and strength ...", "source": "photo",
  "ocr_model": "florence-community/Florence-2-large"}
 ```
-- `fields`: what is printed about each medicine, each value with the line(s) it was read from; `null` when not
-  printed, **never inferred**. On a prescription with several medicines, each gets the lines below its name.
-- `list_check` (with `medications`): `same_medicine`, `different_strength` (same ingredients, another strength:
-  "This says 10 mg; your list has Lipitor 20 mg."), `contains_listed` (a combination including a listed ingredient)
-  or `not_on_list`. A comparison of ingredients and strength, not a model score.
-- `source`: `photo`, `pdf_text` (the PDF's own text) or `pdf_scan` (pages rendered and read, up to 3). Tall photos
-  of whole pages are read in overlapping bands.
-- Finds RxNorm's ingredient and brand names in the printed text, plus international names RxNorm lacks
-  (paracetamol, salbutamol, co-amoxiclav…), with the strength printed next to them. `rxcui` is the exact product when
-  name, strength and dose form agree (`rxnorm_name` then says which), else the brand or ingredient.
-- **Always let the user confirm**, then add it with `POST /v1/safety/medications` as `{"id", "name", "rxcui"}`.
+
+The patient's name, the NRIC and the pharmacy's address and phone never come back; the date printed beside the NRIC
+comes back on its own.
+
+**MOH's sections, field by field** (per medicine, `candidates[]`):
+
+| MOH's guide | Field | Example |
+|---|---|---|
+| **What** name and strength | `name`, `strength` (per tablet or capsule), `release` (`ER` / `DR` when LA, SR, XR, XL, CR, MR, EC… is printed), ingredients, RxNorm code | NIFEDIPINE LA 60MG → `ER`, the extended-release product |
+| **How much** | `instructions.dose`: `amount` (and `amount_max` for a range), `unit` | "Take 1-2 tablets" → 1, 2, `tablet` |
+| **How often** | `instructions.times_per_day` (only when printed: "twice a day", "daily", "once every morning", BD/TDS/QDS/OD, OM/ON), `every_hours` ("every 6 hours", never turned into times a day), `as_needed` ("when necessary", PRN), `duration`, `max_per_day` | 1 |
+| **When** | `instructions.times_of_day` (`morning`, `afternoon`, `evening`, `night`, `bedtime`), `instructions.food` (`before_food`, `after_food`, `with_food`, `with_or_without_food`, `empty_stomach`) | `["morning"]`, `with_or_without_food` |
+| Store your medication | `cautions` with `kind: storage` | "KEEP AWAY FROM CHILDREN", "Keep in the fridge" |
+| Manage common side-effects | `cautions` with `kind: side_effect` | "May cause drowsiness" |
+| (how to take it) | `cautions` with `kind: how_to_take`; other notes `kind: warning` | "Swallow the tablet whole", "Avoid alcohol" |
+| **Why** you are given it | `indication`, as printed (often handwritten) | "blood pressure" |
+| Also on the label | `quantity` (`amount`, `unit`), `date`, `expiry_date`, `dose_form`, `dispensed_by` (response) | "(30 TAB)" → 30 `tablet` |
+| | `directions`: the instruction text as one string (kept for older clients) | |
+
+- **Printed, never inferred.** Every value comes with the line(s) it was read from; a part that isn't on the sticker
+  is `null` (or `[]` / `false`). "Every 8 hours" is not turned into "3 times a day"; no indication is guessed.
+- **Personal details:** lines with the patient's name, NRIC/FIN (also masked, like `SXXXX123A`), address or phone
+  are never used or returned; a date on such a line comes back on its own, without the rest of the line.
+- `label_kind`: `dispensing` (a sticker or prescription with instructions for the patient), `package` (a
+  manufacturer's box: name and strength, no instructions) or `none` (no medicine found).
+- Names in caution lines ("Avoid grapefruit juice", "Do not take with aspirin") are not taken as dispensed medicines.
+- `list_check` (with `medications`): `same_medicine`, `different_strength` ("This says 10 mg; your list has Lipitor
+  20 mg."), `contains_listed` (a combination including a listed ingredient) or `not_on_list`. A comparison of
+  ingredients and strength, not a model score.
+- `source`: `photo`, `pdf_text` (the PDF's own text) or `pdf_scan` (pages rendered and read, up to 3).
+- Finds RxNorm's ingredient and brand names, plus international names RxNorm lacks (paracetamol, salbutamol,
+  co-amoxiclav…), with the strength printed next to them. `rxcui` is the exact product when name, strength and dose
+  form agree.
+- **Always let the patient confirm** the medicine and the instructions against the sticker, then add it with
+  `POST /v1/safety/medications` as `{"id", "name", "rxcui"}`. The backend may build the reminder schedule from
+  `instructions`, but only after that confirmation (the blueprint's enrolment flow).
 - No medicine found: `"candidates": []` and a `message` asking for a closer photo. `502` = RxNorm didn't answer.
-- Only the lines that name a medicine come back (`found_in`): a dispensing label also shows the patient's name.
-- Tested on printed examples only so far; real phone photos of boxes and labels are still to be tested. Takes a few
-  seconds (the text reader, then RxNorm lookups).
+- Tested on rendered Singapore-style stickers (clean and photo-like: tilted, blurred, on a table) and printed
+  examples; **not yet on real phone photos of real stickers** (job B8). English lines only. Takes a few seconds.
 
 ## Safety checks (Stage 3)
 

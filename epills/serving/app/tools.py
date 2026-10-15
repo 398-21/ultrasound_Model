@@ -32,10 +32,11 @@ TOOLS = [
      "Diagnostics in one call: detection plus each pill's visual decision (with a gallery) or catalogue candidates. "
      "Don't use its dose check (deprecated): apply the backend's dose rules to the pills it returns."),
     ("extract_medication_document", "post", "/v1/read-label",
-     "Read a medicine box, pharmacy label or prescription (photo or PDF): medicine names, strength, RxNorm code and "
-     "what is printed (directions, quantity, dates), each with its source line. Fields not printed are null; never "
-     "fill them in. With the patient's medications, says same medicine / different strength / not on the list. "
-     "Always have the patient confirm."),
+     "Read a Singapore pharmacy sticker (or a prescription or box; photo or PDF): per medicine the name, strength, "
+     "RxNorm code, quantity, the instructions in parts (dose, times a day or every N hours, as needed, time of day, "
+     "before/after food), what it is for, cautions and dates, each with its source line. Parts not printed are "
+     "null; never fill them in. With the patient's medications, says same medicine / different strength / not on "
+     "the list. Always have the patient confirm before anything is scheduled."),
     ("find_medication_product", "get", "/v1/pills/search",
      "Products and pictures for a medicine name (brand or generic), with strength, dose form and release as fields. "
      "Never treat products of another strength or form as the same."),
