@@ -27,7 +27,8 @@ def main():
          "Harm*, 2017).")
     text("**What we want.** The patient photographs the pill before taking it. The app says *“this looks like your "
          "metformin”*, or *“this is not one of your medicines”*, or *“turn it over and photograph it again”*. "
-         "A wrong name is dangerous; “unknown” only costs time. So the key number is the **wrong-name rate**.")
+         "An incorrect accepted name and a request for further checking have different consequences. We measure "
+         "**accepted errors and abstention** separately.")
     text("**Why this is hard for a classifier.** Every patient has a different list, and new medicines appear all "
          "the time, so we cannot train one class per medicine. Instead the network learns an **embedding**: pills "
          "of the same medicine land close together, and a new medicine needs only 3 enrolment photos, no retraining. "
@@ -38,7 +39,8 @@ def main():
     text("**Our model.** We reused our earlier facial-expression network: VGG16 with CBAM attention and a "
          "Vision Transformer in parallel, fused by a capsule block, refined by a small transformer, and trained "
          "with ArcFace on 29,471 NLM C3PI photos of 1,710 pill groups. Thresholds are set on validation medicines "
-         "only. Test medicines were never seen in training.")
+         "only. In the strict C3PI evaluation, held-out test medicines were never seen in training. "
+         "The separate official ePillID protocol permits test-type reference images during training.")
     image("images/fig02_architecture.png", width=760)
     note("~2.5 min. Now four execution states, following two real photos through the served model: an unseen photo "
          "of the patient's own metformin, and a pill from someone else's box.")
@@ -80,8 +82,8 @@ def main():
     same_as_pytorch = round(float(z @ unit(back["torch_embedding"][12])), 6)  # @inspect same_as_pytorch
     note("couplings: routing moves from 50/50 to about 9% CNN / 91% ViT for this pill, so the fused vector is "
          "mostly the ViT's view. attention: the refinement block's first layer attends uniformly (0.25 everywhere) "
-         "and the second almost so, so that block acts mostly as a per-token MLP. That fits the paper's finding that "
-         "it isn't the bottleneck. same_as_pytorch is the cosine between this numpy forward pass and the served "
+         "and the second almost so. This describes the attention weights for this example; it does not establish "
+         "whether the block is a bottleneck or improves recognition. That requires a controlled ablation. same_as_pytorch is the cosine between this numpy forward pass and the served "
          "PyTorch model on the same photo: 1.0 means this lecture really runs the deployed model's weights.")
 
     # -------------------------------------------------------------------- state 3: the patient's gallery, open-set match
@@ -141,12 +143,14 @@ def main():
         {"set": "Own pills, other phones (MEDISEG)", "outcome": "named wrongly", "percent": 0.7, "k": 3},
     ]))
     text("- **200 test medicines never seen in training**, 10 enrolled per patient from 3 photos: **78.3% named "
-         "correctly, 0.06% named wrongly**, and 94.8% of pills that aren't the patient's are rejected.\n"
+         "correctly, 0.06% named wrongly** among enrolled queries. Among foreign queries, **94.8% are rejected "
+         "and 3.5% are incorrectly accepted**. These rates have different denominators.\n"
          "- Identifying an unknown pill among 4,936 products: right product first **80.2%** (71.6% by look alone), "
          "in the top 5 **94.4%**.\n"
-         "- **Healthcare reading:** when the model is unsure it says so instead of guessing, so its errors cost "
-         "time, not safety. On other phones it is too cautious (70% of own pills called unknown): it fails safe, "
-         "but enrolment with the patient's own phone, or per-phone calibration, is needed before real use.\n"
+         "- **Healthcare reading:** on MEDISEG, 70.4% of enrolled queries are called unknown and 0.7% receive "
+         "an incorrect accepted name. Rejection creates a substantial checking burden, and residual errors remain. "
+         "These public-image experiments do not establish clinical safety. Local enrolment and calibration "
+         "should be evaluated under the intended acquisition conditions.\n"
          "- Visual evidence only: strength comes from the pharmacy label, and the patient confirms.")
     note("Sources: epills/outputs/runs/stage2_run4/eval (imprint_gallery_large_c92_distinct.json, mediseg.json, "
          "identify_topk_large_c92.json). Live API: https://davidpansx-pharmascan-api.hf.space/docs")

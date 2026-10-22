@@ -1,0 +1,56 @@
+\documentclass{article}
+\PassOptionsToPackage{numbers,sort&compress}{natbib}
+\PassOptionsToPackage{portrait}{geometry}
+\usepackage[preprint]{neurips_2026}
+\makeatletter
+\renewcommand{\@noticestring}{MD6329 Deep Learning for Healthcare AI}
+\makeatother
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amsfonts,booktabs,graphicx,microtype,url,xcolor}
+\usepackage{placeins}
+\usepackage{hyperref}
+\graphicspath{{figures/}}
+\raggedbottom
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.08}
+\setlength{\textfloatsep}{12pt plus 2pt minus 2pt}
+\setlength{\floatsep}{10pt plus 2pt minus 2pt}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue,pdftitle={PharmaScan: Calibrated Open Set Pill Verification}}
+\title{PharmaScan: Calibrated Open Set Pill Verification\\with Visual Embeddings and Imprint Evidence}
+\author{Ding Zixin\\Nanyang Technological University\\Student ID: G2602715D\And Pan Shengxin\\Nanyang Technological University\\Student ID: \rule{1.0in}{0.3pt}}
+\begin{document}
+\setcounter{page}{1}
+\maketitle
+\input{sections/abstract}
+\input{sections/problem}
+\input{sections/related}
+\FloatBarrier
+\input{sections/approach}
+\FloatBarrier
+\input{sections/experiments}
+\FloatBarrier
+\input{sections/conclusion}
+\FloatBarrier
+\clearpage
+\begingroup
+\small
+\bibliographystyle{plainnat}
+\bibliography{references}
+\endgroup
+\FloatBarrier
+\clearpage
+\appendix
+\setcounter{figure}{0}
+\setcounter{table}{0}
+\renewcommand{\thefigure}{A\arabic{figure}}
+\renewcommand{\thetable}{A\arabic{table}}
+\renewcommand{\theHfigure}{appendix.\arabic{figure}}
+\renewcommand{\theHtable}{appendix.\arabic{table}}
+\input{sections/appendix}
+\FloatBarrier
+\end{document}
