@@ -1,0 +1,169 @@
+% ===================================================================================================================
+% Section: Approach (25%). Needs: amsmath, booktabs, graphicx, natbib (the NeurIPS style loads it);
+% \graphicspath{{figures/}}; references.bib. Numbers: epills/configs/stage2_run4.yaml, outputs/runs/stage2_run4/.
+% ===================================================================================================================
+\section{Approach}
+\label{sec:approach}
+
+A detected pill is cropped, embedded by a hybrid CNN--ViT network, and compared by cosine similarity with the
+patient's enrolled medicines or with a product catalogue. Decision thresholds are calibrated on validation medicines
+only, and an OCR imprint reader adds a second, independent check.
+
+\subsection{Network}
+\label{sec:arch}
+
+Figure~\ref{fig:arch} shows our network and Table~\ref{tab:arch} its layers. A VGG16 branch~\citep{simonyan2015vgg}
+with CBAM channel and spatial attention~\citep{woo2018cbam} and a ViT-B/16 branch~\citep{dosovitskiy2021vit} see the
+same $224{\times}224$ crop: the CNN contributes local texture, colour and edges, the ViT global layout through
+self-attention between patches. A capsule block~\citep{sabour2017capsules} turns each branch into a 256-d capsule and
+fuses them by dynamic routing: the coupling coefficients start equal and move towards the branch that agrees with the
+fused vector. A small transformer encoder~\citep{vaswani2017attention} splits the fused vector into four 64-d tokens
+and refines it; a linear head maps the mean token to the embedding $\mathbf{z}=f_\theta(x)$, with
+$\lVert\mathbf{z}\rVert=1$ and 256 dimensions. Auxiliary heads predict the pill's shape and colours. All layers after
+the backbones use Glorot-uniform initialisation.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig02_architecture.pdf}
+  \caption{The hybrid network. VGG16 with CBAM attention and ViT-B/16 see the same crop; a capsule block fuses their
+    features by dynamic routing and a transformer block refines the result into a unit-length 256-d embedding trained
+    with ArcFace, with auxiliary shape and colour heads. Numbers on the arrows are feature sizes.}
+  \label{fig:arch}
+\end{figure}
+
+\begin{table}[t]
+  \caption{The network's layers (inference mode). Pretrained weights: VGG16 on ImageNet, ViT-B/16 on ImageNet-21k.}
+  \label{tab:arch}
+  \centering
+  \small
+  \begin{tabular}{@{}p{0.19\linewidth}p{0.62\linewidth}r@{}}
+    \toprule
+    Block & Details & Output \\
+    \midrule
+    CNN branch & VGG16 conv.\ blocks $\to$ CBAM $\to$ global average pool $\to$ Dense, ReLU & 256 \\
+    ViT branch & ViT-B/16 (\texttt{vit-base-patch16-224-in21k}), pooler output & 768 \\
+    Capsule fusion & per branch: Dense 256, ReLU, dropout 0.4, Dense 256, batch norm; dynamic routing, 2 iterations,
+      residual update & 256 \\
+    Refinement & 4 tokens $\times$ 64 + learned positions; 2 post-norm encoder layers (4 heads, FFN 128, dropout
+      0.4); mean pool & 64 \\
+    Embedding head & Linear, $\ell_2$ normalisation & 256 \\
+    Auxiliary heads & shape (softmax), colour (multi-label sigmoid) & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Training}
+\label{sec:training}
+
+\paragraph{Objective.} The embedding is trained with ArcFace~\citep{deng2019arcface} over the 1,710 training
+appearance groups (pill types that share imprint, shape, colour and size form one group), plus auxiliary losses:
+\begin{equation}
+  \mathcal{L}=-\log\frac{e^{s\cos(\theta_y+m)}}{e^{s\cos(\theta_y+m)}+\sum_{j\neq y}e^{s\cos\theta_j}}
+  +\lambda_s\mathcal{L}_{\text{shape}}+\lambda_c\mathcal{L}_{\text{colour}},
+  \label{eq:loss}
+\end{equation}
+with $s=32$, $m=0.3$ and $\lambda_s=\lambda_c=0.2$, where $\theta_j$ is the angle between $\mathbf{z}$ and the $j$-th
+class weight, $\mathcal{L}_{\text{shape}}$ is a cross-entropy and $\mathcal{L}_{\text{colour}}$ a binary cross-entropy
+(unknown labels ignored). The margin warms up over the first three epochs ($0, 0.1, 0.2$), then stays at $0.3$.
+
+\paragraph{Optimisation.} Table~\ref{tab:train} lists the settings. Training has two phases: in phase 1 the ViT and VGG
+blocks 1--3 are frozen; in phase 2 everything trains. Batches hold $P$ groups $\times$ $K{=}4$ photos
+each~\citep{hermans2017triplet}. AdamW~\citep{loshchilov2019adamw} uses three learning-rate groups: pretrained
+backbones, new layers, and the randomly initialised ArcFace class table. These rates were the decisive choice. Our
+first run trained the new layers at $10^{-3}$ and its embedding collapsed to about 3 effective
+dimensions\footnote{$\exp$ of the entropy of the share of variance per principal direction: 256 if all directions are
+used equally, 1 for a line.}, enough to encode colour and shape but not imprints. Lower rates ($3\times10^{-5}$, then
+$10^{-5}$), a faster rate for the class table and the margin warm-up fixed it (\S\ref{sec:ablations},
+Figure~\ref{fig:training}).
+
+\paragraph{Augmentation.} Colour jitter is kept small (saturation 0.05, hue 0.0125) because colour identifies pills.
+To mimic detector error the crop window is jittered ($\times0.75$--$1.35$, centre shift $\le 10\%$). For other phones
+and lighting we add brightness and contrast ($\pm0.3$), white balance ($\pm8\%$), downscaling to 40--160\,px
+($p{=}0.3$), JPEG quality 30--90 ($p{=}0.3$) and Gaussian noise ($\sigma{=}0.03$, $p{=}0.2$), and paste a
+neighbouring pill partly into the frame ($p{=}0.2$).
+
+\begin{table}[t]
+  \caption{Training settings of the served model (run 4). Selection: top-1 on validation-enrolled medicines (best:
+    phase 2, epoch 35). Seed 2026.}
+  \label{tab:train}
+  \centering
+  \small
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    Setting & Phase 1 & Phase 2 \\
+    \midrule
+    Trainable & all but ViT, VGG blocks 1--3 & all \\
+    Max.\ epochs; batch ($P\times K$) & 25; $32\times4$ & 35; $16\times4$ \\
+    LR: backbones / new layers / ArcFace & $3\!\times\!10^{-5}$ / $3\!\times\!10^{-5}$ / $10^{-3}$
+      & $10^{-5}$ / $10^{-5}$ / $10^{-4}$ \\
+    Optimiser & AdamW, weight decay $10^{-3}$ & same \\
+    LR schedule & reduce on plateau ($\times0.5$, patience 3) & same \\
+    Early stopping & patience 6, best weights restored & same \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Open-set decision rule and calibration}
+\label{sec:decision}
+
+A patient enrols each medicine $j$ from $k{=}3$ photos; its prototype is
+$\mathbf{p}_j=\sum_i f_\theta(x_{j,i})/\lVert\sum_i f_\theta(x_{j,i})\rVert$. For a query with similarities
+$s_j=\mathbf{z}^\top\mathbf{p}_j$, sorted $s_{(1)}\ge s_{(2)}$,
+\begin{equation}
+  \hat y=\begin{cases}
+    \textsc{unknown} & s_{(1)}<\tau,\\
+    \textsc{retake} & s_{(1)}\ge\tau \text{ and } s_{(1)}-s_{(2)}<m,\\
+    \arg\max_j s_j & \text{otherwise,}
+  \end{cases}
+  \label{eq:decision}
+\end{equation}
+where \textsc{retake} asks the patient to turn the pill over and photograph it again. We calibrate on validation only,
+by simulating 1,000 patients with 10 medicines each. $\tau=0.895$ rejects 95\% of medicines that are not the
+patient's. As Figure~\ref{fig:calib}a shows, the margin trades correct names for retakes while wrong names are
+already near zero; we take the largest margin with at most 10\% retakes, $m=0.115$. The crop window, $1.55\times$ the
+detected box's long side, is the best of a sweep from 1.3 to 2.0, although all windows lie within one point
+(Figure~\ref{fig:calib}b).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig06_calibration.pdf}
+  \caption{Settings chosen on validation (1,000 simulated patients, 10 medicines, 3 enrolment photos; $\tau$ rejects
+    95\% of other medicines). (a) The margin trades correct names for retakes while wrong names stay near zero.
+    (b) The crop window (note the narrow $y$-range).}
+  \label{fig:calib}
+\end{figure}
+
+\subsection{Identification with imprints and calibrated confidence}
+\label{sec:identify}
+
+A pill that is not in the gallery is ranked against 4,936 US catalogue products; a product's look score $s$ is the
+similarity of its closest reference photo. Florence-2-large~\citep{xiao2024florence2} reads the imprint zero-shot at
+four rotations (Florence-2-base on the CPU path). Each recorded imprint token gets an IDF weight in $[0,1]$, so a rare
+token (`EC5') counts a lot and a common one (`93', printed on hundreds of Teva pills) little. A product's imprint
+score $r$ is the weight of its best token found in the reads, and the top $K{=}100$ products by look are re-ranked by
+$s+\alpha r$ with $\alpha=0.05$, both chosen on validation (Figure~\ref{fig:identify}b). In the patient's gallery, only
+tokens that distinguish the enrolled imprints from each other confirm or contradict a match. Raw similarities are not
+probabilities (pills that are not in the catalogue still score about 0.93), so a logistic model fitted on validation,
+in the spirit of Platt scaling~\citep{platt1999probabilistic}, gives the stated confidence
+$\sigma(-12.50+12.50\,s_1+72.13\,(s_1-s_2)+3.92\,r_1)$. Here $s_1, s_2$ are the look scores of the top two re-ranked
+products and $r_1$ is the imprint score of the first.
+
+\subsection{Implementation and reproducibility}
+\label{sec:impl}
+
+We use PyTorch~\citep{paszke2019pytorch} 2.11 and Hugging Face Transformers 5.19, and train on one NVIDIA RTX 4080
+SUPER (16\,GB). The model is served as a FastAPI service on a Hugging Face ZeroGPU Space, with 92 automated tests. Each
+stage is one script in the supplementary code (\texttt{make\_splits}, \texttt{train\_stage2},
+\texttt{calibrate\_stage2}, \texttt{evaluate\_stage2}, \texttt{tune\_identify\_rerank}, \texttt{calibrate\_identify},
+\texttt{make\_paper\_figures}), and every number reported here is written to a JSON file by those scripts.
+
+\subsection{Software 3.0 contribution}
+\label{sec:sw3-approach}
+
+We used an AI coding agent, Claude Code~\citep{anthropic_claude_code}, throughout, programming in natural language in
+the sense of Software~3.0~\citep{karpathy2025software3}. It wrote the model, training, calibration and serving code
+and the evaluation scripts from our instructions; we reviewed and ran them. The effective-dimension measure in the
+training log located run 1's collapse in the new layers' learning rate, and the fix was proposed and tested in the
+same workflow. Every proposal was adopted or rejected on validation measurements, not on the agent's word: two
+imprint-reader fine-tunes it set up were rejected (Table~\ref{tab:negative}).
+% [TO DO: agree this paragraph's wording as a team; the development log is epills/PROGRESS_LOG.md.]

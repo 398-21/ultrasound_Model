@@ -1,0 +1,306 @@
+% ===================================================================================================================
+% Section: Experiments (25%). Needs: amsmath, booktabs, graphicx, natbib; \graphicspath{{figures/}}; references.bib.
+% Every figure and table sits in this section, next to the text that cites it.
+% Sources: epills/outputs/runs/*/eval/*.json, docs/stage2_results.md, docs/evidence.md.
+% ===================================================================================================================
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Setup}
+\label{sec:setup}
+
+\paragraph{Test sets.} No test medicine appears in training in any form, and every setting is fixed on validation
+before a test set is scored, once. \emph{C3PI held-out}: 4,005 photos of 200 appearance groups (the medicines of
+ePillID's official holdout fold and their look-alikes), photographed like the training data.
+\emph{MEDISEG}~\citep{mediseg2026}: 13,973 pills of 32 Hong Kong products, taken with other phones and in cluttered
+scenes; median pill size 81\,px. \emph{ePillID}~\citep{usuyama2020epillid}: the published benchmark (fold 4,
+two-sided queries against references of all 4,902 types).
+
+\paragraph{Healthcare-relevant metrics.} We simulate patients with 10 enrolled medicines (3 photos each). For the
+patient's own pills we report the share \emph{named correctly}, \emph{named wrongly} (the safety-critical error),
+\emph{retake} and \emph{called unknown}; for pills that are not theirs, the share \emph{rejected}. A wrong name may be
+acted on, whereas ``unknown'' only costs time, so wrong names matter most. We also report top-$k$ accuracy, AUROC,
+ePillID's MAP and GAP, and the reliability of the stated confidence. 95\% intervals come from resampling medicines.
+
+\paragraph{Baselines.} (i) Run 1: the same network with a common recipe (new layers at $10^{-3}$, no margin
+warm-up). (ii) The published ePillID models~\citep{usuyama2020epillid}. (iii) Look only versus look plus imprint, for
+the gallery and the catalogue. (iv) For the pill finder that feeds the model, an earlier finder that returned exactly
+one box on only 28\% of single-pill photos; ours counts 85--88\% of 1-, 2- and 3-pill photos right
+(Figure~\ref{fig:finder}).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.55\linewidth]{fig17_pill_finder.pdf}
+  \caption{The pill finder on C3PI photos with known pill counts (2- and 3-pill photos composed from single-pill
+    photos). Small shares are listed after each bar in legend order.}
+  \label{fig:finder}
+\end{figure}
+
+\subsection{Main results}
+\label{sec:main}
+
+Table~\ref{tab:main} gives the test results and Figure~\ref{fig:main} the three headline measures. In the conditions
+it was trained for, the served model (run 4) names 76.0\% of a patient's own pills correctly and only 0.04\% wrongly
+(95\% CI 0.02--0.07\%), while rejecting 94.8\% of pills that are not the patient's (Figure~\ref{fig:openset}a). The
+imprint check raises correct names to 78.3\% (wrong 0.06\%) by settling retakes. Against the catalogue, the right
+product comes first for 80.2\% of held-out pills and is in the top 5 for 94.4\%, against 71.6\% and 91.7\% by look
+alone. Adding reference photos (run 3) nearly tripled ePillID MAP@1 (13.7$\to$37.1\%), and robustness augmentation
+(run 4) gained 6.4 points on MEDISEG at a small cost in C3PI conditions; run 4 is the served model.
+
+\begin{table}[t]
+  \caption{Test results on medicines never seen in training (\%; 10-medicine galleries, 3 enrolment photos,
+    calibrated $\tau$ and $m$). Bottom block: the served pipeline with imprint reading (GPU reader; CPU reader in
+    brackets).}
+  \label{tab:main}
+  \centering
+  \small
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    & Run 2 & Run 3 & Run 4 (served) \\
+    \midrule
+    C3PI held-out: top-1 among 200 medicines & 82.0 & \textbf{84.4} & 83.2 \\
+    \quad gallery: named correctly / wrongly & 78.6 / 0.1 & \textbf{80.4} / 0.0 & 76.0 / 0.04 \\
+    \quad other medicines rejected & 94.2 & 94.1 & \textbf{94.8} \\
+    MEDISEG: top-1 among 32 products & 38.9 & 41.8 & \textbf{48.2} \\
+    \quad gallery: named correctly / wrongly & 17.6 / 1.1 & 18.7 / 1.0 & 18.7 / \textbf{0.7} \\
+    \quad own called unknown / other rejected & 51.5 / 78.7 & 64.2 / 89.3 & 70.4 / \textbf{93.1} \\
+    ePillID strict (no test type in training): MAP@1 & 13.7 & 37.1 & \textbf{42.3} \\
+    \midrule
+    C3PI gallery + imprint check: named correctly / wrongly & & & 78.3 (77.3) / 0.06 \\
+    \quad retake / called unknown & & & 7.2 / 14.5 \\
+    Catalogue (4,936 products) + imprint: top-1 / top-5 & & & 80.2 (79.2) / 94.4 \\
+    \quad look only: top-1 / top-5 & & & 71.6 / 91.7 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig07_main_results.pdf}
+  \caption{Test results on medicines never seen in training, each scored once. Run 3 adds C3PI studio reference
+    photos; run 4 adds augmentation for other phones and jittered crops.}
+  \label{fig:main}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig08_open_set_outcomes.pdf}
+  \caption{What the patient sees (run 4, embedding only; 10 medicines, 3 enrolment photos). Small shares are listed
+    after each bar in legend order. In C3PI conditions most own pills are named correctly and wrong names are rare;
+    on other phones the threshold transfers badly and most own pills are called unknown, which is safe but
+    unhelpful.}
+  \label{fig:openset}
+\end{figure}
+
+\subsection{Ablations and hyperparameters}
+\label{sec:ablations}
+
+Table~\ref{tab:ablation} isolates each design decision. The learning rates matter most. With the new layers at
+$10^{-3}$ the embedding collapses to about 3 effective dimensions and validation top-1 stalls at 77\%, while lower rates
+keep 12--15 dimensions and reach 98\% (Figure~\ref{fig:training}). The decision settings are smooth
+(Figure~\ref{fig:calib}): the crop window moves correct names by under one point, and the margin trades correct names
+for retakes almost one for one. The imprint weight has a clear optimum (Figure~\ref{fig:identify}b), because a large
+$\alpha$ lets false OCR reads promote wrong products; the imprint helps most when the pill's own imprint is actually
+read (Figure~\ref{fig:identify}a).
+
+\begin{table}[t]
+  \caption{Ablations (validation unless marked \emph{test}).}
+  \label{tab:ablation}
+  \centering
+  \small
+  \begin{tabular}{@{}p{0.34\linewidth}p{0.46\linewidth}p{0.12\linewidth}@{}}
+    \toprule
+    Change & Effect & Kept \\
+    \midrule
+    Run 1$\to$2: lower LRs ($3{\times}10^{-5}$, $10^{-5}$), separate ArcFace LR, margin warm-up & top-1 in 10
+      medicines 77.2$\to$98.3\%; AUROC 0.78$\to$0.981; correct at 95\% rejection 17$\to$90.7\%; dims
+      $\approx$3$\to$12--15 & yes \\
+    Run 2$\to$3: + studio reference photos & validation 98.1\%; \emph{test} ePillID MAP@1 13.7$\to$37.1\% & yes \\
+    Run 3$\to$4: + photo and crop-jitter augmentation & \emph{test} MEDISEG 41.8$\to$48.2\%; C3PI 84.4$\to$83.2\%
+      & yes \\
+    Crop window 1.3--2.0$\times$ & named correctly 86.1--87.2\% & 1.55 \\
+    Margin $m$ 0--0.3 & named correctly 87$\to$54\%; retakes 0$\to$34\% & 0.115 \\
+    Imprint re-ranking $\alpha$, $K$ & top-1 72.1\% ($\alpha{=}0$)$\to$81.6\%; \emph{test} 71.6$\to$80.2\%
+      & 0.05, 100 \\
+    Gallery check: distinct tokens only & named wrongly 35$\to$30; other pills accepted 6,158$\to$6,150 & yes \\
+    Official ePillID protocol (runs 5--7) & ePillID MAP 0.57--0.60; MEDISEG 52--54\% & benchmark \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig05_training_curves.pdf}
+  \caption{Training. (a) Validation top-1 within a gallery of 10 medicines never trained on. (b) Effective embedding
+    dimensions: with the new layers at $10^{-3}$ the embedding collapsed to about 3.}
+  \label{fig:training}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig12_identify_topk.pdf}
+  \caption{Catalogue identification. (a) Top-$k$ on held-out medicines: the imprint helps most when the pill's own
+    imprint is read (92.9\% first vs.\ 68.6\% when it is not). (b) Validation grid for $\alpha$ and $K$; the box marks
+    the served setting.}
+  \label{fig:identify}
+\end{figure}
+
+\subsection{Robustness}
+\label{sec:robustness}
+
+\emph{Other phones} are the main weakness (Table~\ref{tab:main}, Figure~\ref{fig:openset}). On MEDISEG, top-1 drops to
+48\% and the C3PI-calibrated threshold calls 70\% of own pills unknown, though wrong names stay below 1\%: the system
+fails safe but is not yet usable there. Small pills are the main factor (Figure~\ref{fig:robust}a: 36--37\% top-1 under
+100\,px, 62\% above), and more enrolment photos help only partly (Figure~\ref{fig:robust}b). \emph{Pills outside the
+catalogue}: 69.8\% of MEDISEG pills get \emph{no confident match} and 7.0\% \emph{possible match}, while 75.8\% of
+catalogue pills get \emph{possible match}, and the stated confidence tracks observed accuracy
+(Figure~\ref{fig:confidence}). \emph{CPU deployment}: with the smaller reader, identification loses one point (79.2\%)
+and wrong names do not rise (Table~\ref{tab:main}).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig09_robustness.pdf}
+  \caption{Robustness on MEDISEG (32 Hong Kong products, other phones, none in training). (a) Top-1 by pill size in the
+    photo. (b) MEDISEG's deploy split (40 query pills): more enrolment photos help only partly.}
+  \label{fig:robust}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig13_identify_confidence.pdf}
+  \caption{Calibrated confidence for identification. (a) Stated confidence against observed accuracy on held-out
+    medicines. (b) Verdicts for catalogue pills and for pills not in the catalogue (MEDISEG).}
+  \label{fig:confidence}
+\end{figure}
+
+\subsection{Comparison with the ePillID benchmark}
+\label{sec:epillid}
+
+For a like-for-like comparison, runs 5--7 follow ePillID's protocol and train on the references of all types
+(Table~\ref{tab:epillid}, Figure~\ref{fig:epillid}). Our embedding alone (MAP 0.57--0.60) is in the range of the
+paper's plain classifiers, not its best model. Re-ranking by imprint, which the paper's model did not use, raises MAP
+to 0.77--0.78 and GAP@1 to 0.921, above the paper's 0.912, while MAP@1 stays lower (69.0 vs.\ 92.0\%). The paper's
+ablations attribute its advantage to its training recipe (contrastive and hard-mined triplet losses with softmax and
+ArcFace over side-specific classes, a 2,048-d embedding) rather than its backbone. We ruled out our crop style, the
+64-d pooling, and local versus global pooling as causes.
+
+\begin{table}[t]
+  \caption{ePillID, official protocol (fold 4, two-sided). The best published model is a ResNet-152 with compact
+    bilinear pooling and multi-head metric learning. ``+ imprint'' uses OCR information the published models did not
+    use.}
+  \label{tab:epillid}
+  \centering
+  \small
+  \begin{tabular}{@{}lccccc@{}}
+    \toprule
+    & MAP & GAP & MAP@1 & GAP@1 & top-5 \\
+    \midrule
+    \citet{usuyama2020epillid}, best & \textbf{0.958} & \textbf{0.812} & \textbf{92.0} & 0.912 & -- \\
+    \citet{usuyama2020epillid}, plain classifiers & .547--.727 & .241--.448 & 35.7--56.8 & .331--.551 & -- \\
+    Ours, run 5 & 0.597 & 0.207 & 45.7 & 0.526 & 77.5 \\
+    Ours, run 5 + imprint & 0.780 & 0.598 & 69.0 & \textbf{0.921} & 89.6 \\
+    Ours, run 7 + imprint & 0.774 & 0.614 & 67.6 & 0.916 & 89.5 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig10_epillid_benchmark.pdf}
+  \caption{ePillID benchmark (official protocol): MAP@1 and GAP@1 of our runs with and without imprint re-ranking
+    against the best published model.}
+  \label{fig:epillid}
+\end{figure}
+
+\subsection{Error analysis and interpretation}
+\label{sec:errors}
+
+\paragraph{Imprints.} The reader finds a token of the pill's own imprint on about 47\% of validation photos.
+Figure~\ref{fig:imprint} shows where it fails: debossed, small and round pills are hardest, and C3PI's own raters
+marked many imprints unreadable.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig11_imprint_reading.pdf}
+  \caption{Share of validation photos on which a token of the pill's own imprint is read (Florence-2-large, zero-shot),
+    by imprint type, C3PI rater's judgement of visibility, pill size and shape.}
+  \label{fig:imprint}
+\end{figure}
+
+\paragraph{Look-alikes.} The hardest errors are medicines that look the same (Figure~\ref{fig:lookalike}). With two
+strengths of one ingredient in a gallery, one is named as the other 0.11\% of the time, or 0.58\% when shape and colour
+also match. The imprint check settles retakes but cannot confirm strength, so strength is taken from the pharmacy
+label. Same-manufacturer pairs that share an imprint prefix are confused 0.01\% of the time overall, but the worst
+pairs share Teva's `TV', e.g.\ tramadol 50\,mg (TV;58) and carvedilol 12.5\,mg (TV;7295) at 5.8\%.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig16_lookalike_error_analysis.pdf}
+  \caption{Look-alikes, with both medicines enrolled in one gallery. (a) Wrong-name rates by kind of pair, look only
+    and with the imprint check. (b) The worst same-manufacturer pairs.}
+  \label{fig:lookalike}
+\end{figure}
+
+\paragraph{What the model learned.} Photos of a medicine never seen in training form tight clusters
+(Figure~\ref{fig:tsne}), and the calibrated threshold separates a photo's similarity to its own medicine from its
+similarity to the closest of nine others (Figure~\ref{fig:sim}). Tracing the served model on single photos shows two
+things. Capsule routing moves from equal weights to about 9\% CNN and 91\% ViT, and the refinement block's token
+attention is nearly uniform, consistent with that block not being a bottleneck. Overall, the hybrid learns an
+embedding that transfers to unseen medicines when it is trained with the right learning rates. Calibration gives
+predictable behaviour on new medicines in familiar conditions but not across phones, and the imprint is evidence that
+complements the look.
+
+\begin{figure}[t]
+  \centering
+  \begin{minipage}[t]{0.49\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig14_similarity_distributions.pdf}
+    \caption{Held-out photos: similarity to their own medicine's 3-photo prototype and to the closest of 9 other
+      medicines, with the threshold $\tau$.}
+    \label{fig:sim}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.49\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig15_embedding_tsne.pdf}
+    \caption{t-SNE~\citep{vandermaaten2008tsne} of the 4,005 held-out photos' embeddings; three medicines highlighted
+      (photo counts in brackets).}
+    \label{fig:tsne}
+  \end{minipage}
+\end{figure}
+
+\paragraph{Negative results.} Table~\ref{tab:negative} lists what did not work. Two LoRA~\citep{hu2022lora} fine-tunes
+of the imprint reader read more imprints on validation (44.0$\to$53.5\% and 45.0$\to$50.7\%). The first wrote
+memorised imprints onto new pills; the second doubled wrong names in galleries (30$\to$61). Both were rejected, as were
+look-alike-character matching and per-candidate imprint scoring.
+
+\begin{table}[t]
+  \caption{What did not work (validation).}
+  \label{tab:negative}
+  \centering
+  \small
+  \begin{tabular}{@{}p{0.34\linewidth}p{0.46\linewidth}p{0.12\linewidth}@{}}
+    \toprule
+    Tried & Result & Decision \\
+    \midrule
+    LoRA fine-tune of Florence-2-large, v1 (19,312 photos of training medicines) & imprints read 44.0$\to$53.5\%, but
+      memorised imprints written onto new pills; identification and gallery check worse & rejected \\
+    LoRA v2 (also learns to output nothing on unreadable photos) & own imprint read 45.0$\to$50.7\%; identification
+      82.0$\to$83.0\%; gallery wrong names 30$\to$61 & rejected \\
+    Look-alike characters (O/0, B/8) treated as equal & measured and dropped & rejected \\
+    Scoring each candidate's imprint separately & measured and dropped & rejected \\
+    Runs 6--7: stronger fine-tuning; benchmark-aligned training & better validation and MEDISEG, not ePillID & not
+      served \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Software 3.0 in coding and evaluation}
+\label{sec:sw3-experiments}
+
+The evaluation harness was written with the coding agent from natural-language specifications: the patient
+simulation, the look-alike and same-manufacturer stress tests, the top-$k$ and confidence evaluations, the figures, and
+the API's 92 tests. Tests and review caught real defects, among them a safety bug in the label reader that linked an
+extended-release sticker to the immediate-release product; we fixed it by enforcing the release form. Our safeguards
+against over-trusting generated code were procedural: settings were chosen on validation, each test set was scored
+once, and every number in this paper is read from a file written by a script.
+% [TO DO: the team decides how to evidence tool use (PROGRESS_LOG.md, git history); do not create mock logs.]

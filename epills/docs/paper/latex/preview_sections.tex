@@ -1,0 +1,25 @@
+% Preview wrapper: compiles approach.tex and experiments.tex in the NeurIPS 2025 style.
+% Put neurips_2025.sty (NeurIPS style kit) and ../references.bib next to it, and the figure PDFs in figures/.
+\documentclass{article}
+\usepackage[preprint]{neurips_2025}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsmath,amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\title{PharmaScan: Approach and Experiments (section preview)}
+\author{Team}
+\begin{document}
+\maketitle
+\input{approach}
+\input{experiments}
+\bibliographystyle{plainnat}
+\bibliography{references}
+\appendix
+\end{document}

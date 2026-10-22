@@ -1,0 +1,179 @@
+[
+ {
+  "name": "fig01_system_overview",
+  "png": "fig01_system_overview.png",
+  "pdf": "fig01_system_overview.pdf",
+  "caption": "PharmaScan. A dose photo is checked and each pill is cropped and embedded by the hybrid CNN\u2013ViT; the embedding is matched against the patient's own enrolled medicines (open-set, with calibrated rejection) or, for an unknown pill, against a 4,936-product catalogue. An imprint reader checks both answers. A label reader turns the pharmacy sticker into structured fields (Singapore MOH format) and safety rules screen interactions; the app's agent decides, and the patient confirms.",
+  "sources": [
+   "serving/app/main.py",
+   "docs/API.md"
+  ]
+ },
+ {
+  "name": "fig02_architecture",
+  "png": "fig02_architecture.png",
+  "pdf": "fig02_architecture.pdf",
+  "caption": "The hybrid network. VGG16 with CBAM attention and ViT-B/16 see the same crop; a capsule block fuses their features by dynamic routing and a transformer block refines the result into a unit-length 256-d embedding trained with ArcFace, with auxiliary shape and colour heads. Numbers on the arrows are feature sizes.",
+  "sources": [
+   "src/epills/core/models/hybrid.py",
+   "configs/stage2_run4.yaml"
+  ]
+ },
+ {
+  "name": "fig03_data_statistics",
+  "png": "fig03_data_statistics.png",
+  "pdf": "fig03_data_statistics.pdf",
+  "caption": "C3PI everyday photos. (a) Photos per medicine. (b) Splits are made by appearance group (look-alike products share a group), so no medicine or look-alike appears in two splits; the test split holds the medicines of ePillID's official holdout fold.",
+  "sources": [
+   "data/processed/c3pi_splits/manifest.csv"
+  ]
+ },
+ {
+  "name": "fig04_qualitative_examples",
+  "png": "fig04_qualitative_examples.png",
+  "pdf": "fig04_qualitative_examples.pdf",
+  "caption": "Qualitative examples (C3PI validation medicines, never trained on): the catalogue reference picture and four everyday crops per medicine. Lighting, background, white balance, side shown and rotation vary; debossed imprints are often hard to read.",
+  "sources": [
+   "data/interim/c3pi/crops/images",
+   "data/processed/catalogue"
+  ]
+ },
+ {
+  "name": "fig05_training_curves",
+  "png": "fig05_training_curves.png",
+  "pdf": "fig05_training_curves.pdf",
+  "caption": "Training. (a) Validation top-1 within a gallery of 10 medicines never trained on, each enrolled from 3 photos. (b) Effective dimensionality of the embedding (exp of the entropy of the variance spectrum). With the new layers trained at 1e-3 the embedding collapsed to about 3 dimensions; lower rates, a separate rate for the ArcFace table and a margin warm-up fixed it.",
+  "sources": [
+   "outputs/runs/stage2_baseline/history.csv",
+   "outputs/runs/stage2_run2/history.csv",
+   "outputs/runs/stage2_run3/history.csv",
+   "outputs/runs/stage2_run4/history.csv"
+  ]
+ },
+ {
+  "name": "fig06_calibration",
+  "png": "fig06_calibration.png",
+  "pdf": "fig06_calibration.pdf",
+  "caption": "Settings chosen on validation (1,000 simulated patients, 10 medicines, 3 enrolment photos; \u03c4 rejects 95% of other medicines). (a) The margin trades correct names for retakes while wrong names stay near zero. (b) The crop window (note the narrow y-range).",
+  "sources": [
+   "outputs/runs/stage2_run4/calibration_table.csv",
+   "outputs/runs/stage2_run4/calibration.json"
+  ]
+ },
+ {
+  "name": "fig07_main_results",
+  "png": "fig07_main_results.png",
+  "pdf": "fig07_main_results.pdf",
+  "caption": "Test results on medicines never seen in training, each scored once. Run 3 adds C3PI studio reference photos; run 4 adds augmentation for other phones and jittered crops.",
+  "sources": [
+   "outputs/runs/stage2_run2/eval/c3pi_holdout.json",
+   "outputs/runs/stage2_run2/eval/mediseg.json",
+   "outputs/runs/stage2_run2/eval/epillid.json",
+   "outputs/runs/stage2_run3/eval/c3pi_holdout.json",
+   "outputs/runs/stage2_run3/eval/mediseg.json",
+   "outputs/runs/stage2_run3/eval/epillid.json",
+   "outputs/runs/stage2_run4/eval/c3pi_holdout.json",
+   "outputs/runs/stage2_run4/eval/mediseg.json",
+   "outputs/runs/stage2_run4/eval/epillid.json"
+  ]
+ },
+ {
+  "name": "fig08_open_set_outcomes",
+  "png": "fig08_open_set_outcomes.png",
+  "pdf": "fig08_open_set_outcomes.pdf",
+  "caption": "What the patient sees (run 4, embedding only; 10 medicines, 3 enrolment photos, calibrated \u03c4 and m). Small shares are listed after each bar in legend order. In C3PI conditions most own pills are named correctly and wrong names are rare; on other phones the threshold transfers badly and most own pills are called unknown, which is safe but unhelpful.",
+  "sources": [
+   "outputs/runs/stage2_run4/eval/c3pi_holdout.json",
+   "outputs/runs/stage2_run4/eval/mediseg.json"
+  ]
+ },
+ {
+  "name": "fig09_robustness",
+  "png": "fig09_robustness.png",
+  "pdf": "fig09_robustness.pdf",
+  "caption": "Robustness on MEDISEG (32 Hong Kong products, other phones and cluttered scenes, none in training). (a) Small pills are the hard case. (b) On MEDISEG's deploy split (40 query pills) more enrolment photos help only partly: the gap is mostly the photo domain.",
+  "sources": [
+   "outputs/runs/stage2_run2/eval/mediseg.json",
+   "outputs/runs/stage2_run3/eval/mediseg.json",
+   "outputs/runs/stage2_run4/eval/mediseg.json"
+  ]
+ },
+ {
+  "name": "fig10_epillid_benchmark",
+  "png": "fig10_epillid_benchmark.png",
+  "pdf": "fig10_epillid_benchmark.pdf",
+  "caption": "The published ePillID benchmark (official protocol, fold 4, two-sided queries against references of all 4,902 types). Runs 5\u20137 are trained on ePillID's own training folds. Imprint re-ranking uses OCR information the published model did not use.",
+  "sources": [
+   "outputs/runs/stage2_run5_official/eval/epillid*.json",
+   "outputs/runs/stage2_run6_official/eval/epillid*.json",
+   "outputs/runs/stage2_run7_official/eval/epillid*.json"
+  ]
+ },
+ {
+  "name": "fig11_imprint_reading",
+  "png": "fig11_imprint_reading.png",
+  "pdf": "fig11_imprint_reading.pdf",
+  "caption": "Imprint reading (Florence-2-large, zero-shot, 7,068 validation photos of medicines with an imprint): the share of photos on which a token of the pill's own imprint is read, by imprint type, C3PI rater's judgement of visibility, pill size and shape.",
+  "sources": [
+   "data/interim/ocr/large_c92/validation_all.json",
+   "data/interim/c3pi/metadata.csv"
+  ]
+ },
+ {
+  "name": "fig12_identify_topk",
+  "png": "fig12_identify_topk.png",
+  "pdf": "fig12_identify_topk.pdf",
+  "caption": "Identifying an unknown pill against the 4,936-product catalogue. (a) Top-k on held-out medicines: imprint re-ranking helps most when the pill's own imprint is read. (b) The re-ranking weight \u03b1 and depth K on validation; the box marks the served setting, and \u03b1 = 0 is the look alone.",
+  "sources": [
+   "outputs/runs/stage2_run4/eval/identify_topk_large_c92.json",
+   "outputs/runs/stage2_run4/eval/identify_rerank_large_c92.json"
+  ]
+ },
+ {
+  "name": "fig13_identify_confidence",
+  "png": "fig13_identify_confidence.png",
+  "pdf": "fig13_identify_confidence.pdf",
+  "caption": "Calibrated confidence for identification. Raw cosine similarities are not probabilities (pills that are not in the catalogue still score about 0.93), so a logistic model of the top-1 similarity, its gap to the runner-up and the imprint evidence is fitted on validation. (a) Stated confidence against observed accuracy on held-out medicines. (b) Verdicts for catalogue pills and for pills not in the catalogue.",
+  "sources": [
+   "outputs/runs/stage2_run4/eval/identify_confidence_large_c92.json"
+  ]
+ },
+ {
+  "name": "fig14_similarity_distributions",
+  "png": "fig14_similarity_distributions.png",
+  "pdf": "fig14_similarity_distributions.pdf",
+  "caption": "Held-out photos (200 new medicines): similarity to their own medicine's prototype (mean of 3 other photos) and to the closest of 9 other medicines, as in a 10-medicine gallery, with the threshold \u03c4 chosen on validation.",
+  "sources": [
+   "outputs/runs/stage2_run4/eval/c3pi_holdout_embeddings.npz",
+   "outputs/runs/stage2_run4/calibration.json"
+  ]
+ },
+ {
+  "name": "fig15_embedding_tsne",
+  "png": "fig15_embedding_tsne.png",
+  "pdf": "fig15_embedding_tsne.pdf",
+  "caption": "t-SNE of the served model's embeddings for the 4,005 photos of the 200 held-out medicines (never seen in training). Photos of one medicine form tight clusters; the three single-tablet medicines with the most photos are highlighted (photo counts in brackets).",
+  "sources": [
+   "outputs/runs/stage2_run4/eval/c3pi_holdout_embeddings.npz"
+  ]
+ },
+ {
+  "name": "fig16_lookalike_error_analysis",
+  "png": "fig16_lookalike_error_analysis.png",
+  "pdf": "fig16_lookalike_error_analysis.pdf",
+  "caption": "Look-alikes, with both medicines enrolled in one gallery (C3PI validation and held-out photos). (a) Wrong names stay rare; different strengths that look the same are the hardest. The imprint check settles retakes (same-ingredient pairs: retakes 7.5% \u2192 5.2%, named correctly 80.1% \u2192 82.3%) at the cost of slightly more wrong names. (b) The worst same-manufacturer pairs share Teva's 'TV' prefix.",
+  "sources": [
+   "outputs/runs/stage2_run4/eval/lookalike_strengths_large_c92_distinct.json",
+   "outputs/runs/stage2_run4/eval/same_maker_imprints_large_c92_distinct.json"
+  ]
+ },
+ {
+  "name": "fig17_pill_finder",
+  "png": "fig17_pill_finder.png",
+  "pdf": "fig17_pill_finder.pdf",
+  "caption": "The pill finder on C3PI photos with known pill counts (2- and 3-pill photos composed from single-pill photos). An earlier finder found exactly one box on only 28% of single-pill photos.",
+  "sources": [
+   "outputs/eval/pill_finder.json"
+  ]
+ }
+]
