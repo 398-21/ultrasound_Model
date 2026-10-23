@@ -1,0 +1,12 @@
+{
+  "version": "2",
+  "traces": [
+    {
+      "id": "01_pharmascan",
+      "title": "PharmaScan: is this my pill?",
+      "path": "traces/01_pharmascan.json",
+      "step_count": 140,
+      "built_at": "2026-10-23T08:27:54.126882+00:00"
+    }
+  ]
+}

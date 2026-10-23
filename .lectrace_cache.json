@@ -1,0 +1,22 @@
+{
+  "pharmascan-lectrace\\01_pharmascan.py": {
+    "hash": "8aff59fb7f26f4ab1c34cbeba1417b3bbf757596cc293c2bcbd30dfd2bed2109",
+    "index_entry": {
+      "id": "01_pharmascan",
+      "title": "PharmaScan: is this my pill?",
+      "path": "traces/01_pharmascan.json",
+      "step_count": 8,
+      "built_at": "2026-10-23T08:16:33.299609+00:00"
+    }
+  },
+  "01_pharmascan.py": {
+    "hash": "8aff59fb7f26f4ab1c34cbeba1417b3bbf757596cc293c2bcbd30dfd2bed2109",
+    "index_entry": {
+      "id": "01_pharmascan",
+      "title": "PharmaScan: is this my pill?",
+      "path": "traces/01_pharmascan.json",
+      "step_count": 140,
+      "built_at": "2026-10-23T08:27:54.126882+00:00"
+    }
+  }
+}

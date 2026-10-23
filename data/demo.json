@@ -1,0 +1,2670 @@
+{
+ "model_version": "stage2_run4@2026-10-09",
+ "window": 1.55,
+ "threshold": 0.8948970437049866,
+ "margin": 0.115,
+ "imprint_alpha": 0.05,
+ "imprint_top_k": 100,
+ "confidence": {
+  "weights": [
+   -12.5019,
+   12.5011,
+   72.1318,
+   3.9206
+  ],
+  "t_poor": 0.9462,
+  "t_good": 0.9658,
+  "low": 0.2,
+  "high": 0.5
+ },
+ "patient": {
+  "pm-metformin": "627560143_1",
+  "pm-lisinopril": "001723758_1",
+  "pm-amlodipine": "000691540_1",
+  "pm-simvastatin": "658620052_1"
+ },
+ "items": [
+  {
+   "role": "enrol",
+   "medication_id": "pm-metformin",
+   "pill_id": "627560143_1",
+   "crop": "images/00_enrol_627560143_1_crop.png",
+   "imprint": "143",
+   "name": "24 HR metformin hydrochloride 750 MG Extended Release Oral Tablet"
+  },
+  {
+   "role": "enrol",
+   "medication_id": "pm-metformin",
+   "pill_id": "627560143_1",
+   "crop": "images/01_enrol_627560143_1_crop.png",
+   "imprint": "143",
+   "name": "24 HR metformin hydrochloride 750 MG Extended Release Oral Tablet"
+  },
+  {
+   "role": "enrol",
+   "medication_id": "pm-metformin",
+   "pill_id": "627560143_1",
+   "crop": "images/02_enrol_627560143_1_crop.png",
+   "imprint": "143",
+   "name": "24 HR metformin hydrochloride 750 MG Extended Release Oral Tablet"
+  },
+  {
+   "role": "enrol",
+   "medication_id": "pm-lisinopril",
+   "pill_id": "001723758_1",
+   "crop": "images/03_enrol_001723758_1_crop.png",
+   "imprint": "3758",
+   "name": "lisinopril 5 MG Oral Tablet"
+  },
+  {
+   "role": "enrol",
+   "medication_id": "pm-lisinopril",
+   "pill_id": "001723758_1",
+   "crop": "images/04_enrol_001723758_1_crop.png",
+   "imprint": "3758",
+   "name": "lisinopril 5 MG Oral Tablet"
+  },
+  {
+   "role": "enrol",
+   "medication_id": "pm-lisinopril",
+   "pill_id": "001723758_1",
+   "crop": "images/05_enrol_001723758_1_crop.png",
+   "imprint": "3758",
+   "name": "lisinopril 5 MG Oral Tablet"
+  },
+  {
+   "role": "enrol",
+   "medication_id": "pm-amlodipine",
+   "pill_id": "000691540_1",
+   "crop": "images/06_enrol_000691540_1_crop.png",
+   "imprint": "NORVASC;10",
+   "name": "amlodipine 10 MG Oral Tablet [Norvasc]"
+  },
+  {
+   "role": "enrol",
+   "medication_id": "pm-amlodipine",
+   "pill_id": "000691540_1",
+   "crop": "images/07_enrol_000691540_1_crop.png",
+   "imprint": "NORVASC;10",
+   "name": "amlodipine 10 MG Oral Tablet [Norvasc]"
+  },
+  {
+   "role": "enrol",
+   "medication_id": "pm-amlodipine",
+   "pill_id": "000691540_1",
+   "crop": "images/08_enrol_000691540_1_crop.png",
+   "imprint": "NORVASC;10",
+   "name": "amlodipine 10 MG Oral Tablet [Norvasc]"
+  },
+  {
+   "role": "enrol",
+   "medication_id": "pm-simvastatin",
+   "pill_id": "658620052_1",
+   "crop": "images/09_enrol_658620052_1_crop.png",
+   "imprint": "A;02",
+   "name": "simvastatin 20 MG Oral Tablet"
+  },
+  {
+   "role": "enrol",
+   "medication_id": "pm-simvastatin",
+   "pill_id": "658620052_1",
+   "crop": "images/10_enrol_658620052_1_crop.png",
+   "imprint": "A;02",
+   "name": "simvastatin 20 MG Oral Tablet"
+  },
+  {
+   "role": "enrol",
+   "medication_id": "pm-simvastatin",
+   "pill_id": "658620052_1",
+   "crop": "images/11_enrol_658620052_1_crop.png",
+   "imprint": "A;02",
+   "name": "simvastatin 20 MG Oral Tablet"
+  },
+  {
+   "role": "dose",
+   "medication_id": "pm-metformin",
+   "pill_id": "627560143_1",
+   "crop": "images/12_dose_627560143_1_crop.png",
+   "imprint": "143",
+   "name": "24 HR metformin hydrochloride 750 MG Extended Release Oral Tablet",
+   "photo": "images/12_dose_627560143_1_photo.jpg",
+   "box": [
+    804.7,
+    622.4,
+    1247.4,
+    911.5
+   ],
+   "pills_found": 1,
+   "finder_flags": [],
+   "reads": [
+    "43\n",
+    "C\n",
+    "87\n",
+    "8\n"
+   ],
+   "cnn_attention": "images/12_dose_627560143_1_cnn_attention.png",
+   "vit_attention": "images/12_dose_627560143_1_vit_attention.png"
+  },
+  {
+   "role": "dose",
+   "medication_id": null,
+   "pill_id": "003783855_1",
+   "crop": "images/13_dose_003783855_1_crop.png",
+   "imprint": "M;EC5",
+   "name": "escitalopram 5 MG Oral Tablet",
+   "photo": "images/13_dose_003783855_1_photo.jpg",
+   "box": [
+    903.6,
+    664.1,
+    1106.8,
+    856.8
+   ],
+   "pills_found": 1,
+   "finder_flags": [],
+   "reads": [
+    "EC5\n",
+    "ECS\n",
+    "ECS\n",
+    "ECS\n"
+   ],
+   "cnn_attention": "images/13_dose_003783855_1_cnn_attention.png",
+   "vit_attention": "images/13_dose_003783855_1_vit_attention.png"
+  }
+ ],
+ "catalogue_products": [
+  {
+   "pill_id": "000930738_1",
+   "name": "donepezil hydrochloride 5 MG Oral Tablet",
+   "imprint": "TEVA;738",
+   "tokens": {
+    "TEVA": 0.5099,
+    "738": 0.9209
+   }
+  },
+  {
+   "pill_id": "000937208_1",
+   "name": "mirtazapine 45 MG Oral Tablet",
+   "imprint": "93;7208",
+   "tokens": {
+    "7208": 1.0,
+    "93": 0.4414
+   }
+  },
+  {
+   "pill_id": "683820094_1",
+   "name": "carvedilol 12.5 MG Oral Tablet",
+   "imprint": "ZC41",
+   "tokens": {
+    "ZC41": 1.0
+   }
+  },
+  {
+   "pill_id": "003783855_1",
+   "name": "escitalopram 5 MG Oral Tablet",
+   "imprint": "M;EC5",
+   "tokens": {
+    "EC5": 1.0
+   }
+  },
+  {
+   "pill_id": "000938118_1",
+   "name": "famciclovir 250 MG Oral Tablet",
+   "imprint": "8118;93",
+   "tokens": {
+    "93": 0.4414,
+    "8118": 1.0
+   }
+  },
+  {
+   "pill_id": "000024771_1",
+   "name": "pitavastatin calcium 2 MG Oral Tablet [Livalo]",
+   "imprint": "2;KC",
+   "tokens": {
+    "KC": 0.8056
+   }
+  },
+  {
+   "pill_id": "683820093_1",
+   "name": "carvedilol 6.25 MG Oral Tablet",
+   "imprint": "ZC40",
+   "tokens": {
+    "ZC40": 1.0
+   }
+  },
+  {
+   "pill_id": "683820095_1",
+   "name": "carvedilol 25 MG Oral Tablet",
+   "imprint": "ZC42",
+   "tokens": {
+    "ZC42": 1.0
+   }
+  },
+  {
+   "pill_id": "000937240_1",
+   "name": "risperidone 1 MG Oral Tablet",
+   "imprint": "93;7240",
+   "tokens": {
+    "7240": 1.0,
+    "93": 0.4414
+   }
+  },
+  {
+   "pill_id": "003780080_1",
+   "name": "indapamide 2.5 MG Oral Tablet",
+   "imprint": "M;80",
+   "tokens": {
+    "80": 0.6736
+   }
+  },
+  {
+   "pill_id": "576640477_1",
+   "name": "metoprolol tartrate 50 MG Oral Tablet",
+   "imprint": "477",
+   "tokens": {
+    "477": 1.0
+   }
+  },
+  {
+   "pill_id": "000024770_1",
+   "name": "pitavastatin calcium 1 MG Oral Tablet [Livalo]",
+   "imprint": "1;KC",
+   "tokens": {
+    "KC": 0.8056
+   }
+  },
+  {
+   "pill_id": "003784151_1",
+   "name": "tramadol hydrochloride 50 MG Oral Tablet",
+   "imprint": "M;T7",
+   "tokens": {
+    "T7": 0.9538
+   }
+  },
+  {
+   "pill_id": "627560707_1",
+   "name": "topiramate 25 MG Oral Tablet",
+   "imprint": "S;707",
+   "tokens": {
+    "707": 0.8955
+   }
+  },
+  {
+   "pill_id": "684620163_1",
+   "name": "carvedilol 6.25 MG Oral Tablet",
+   "imprint": "G;41",
+   "tokens": {
+    "41": 0.7865
+   }
+  },
+  {
+   "pill_id": "003783634_1",
+   "name": "carvedilol 25 MG Oral Tablet",
+   "imprint": "M;C34",
+   "tokens": {
+    "C34": 1.0
+   }
+  },
+  {
+   "pill_id": "684620224_1",
+   "name": "lithium carbonate 450 MG Extended Release Oral Tablet",
+   "imprint": "224;G",
+   "tokens": {
+    "224": 0.9538
+   }
+  },
+  {
+   "pill_id": "001151072_1",
+   "name": "dipyridamole 75 MG Oral Tablet",
+   "imprint": "C83",
+   "tokens": {
+    "C83": 1.0
+   }
+  },
+  {
+   "pill_id": "003780330_1",
+   "name": "amitriptyline hydrochloride 10 MG / perphenazine 2 MG Oral Tablet",
+   "imprint": "MYLAN;330",
+   "tokens": {
+    "330": 0.9209,
+    "MYLAN": 0.5697
+   }
+  },
+  {
+   "pill_id": "000937771_1",
+   "name": "risedronate sodium 150 MG Oral Tablet",
+   "imprint": "93;7771",
+   "tokens": {
+    "93": 0.4414,
+    "7771": 1.0
+   }
+  },
+  {
+   "pill_id": "646790927_1",
+   "name": "lisinopril 2.5 MG Oral Tablet",
+   "imprint": "W",
+   "tokens": {}
+  },
+  {
+   "pill_id": "002282803_1",
+   "name": "spironolactone 25 MG Oral Tablet",
+   "imprint": "R;803",
+   "tokens": {
+    "803": 1.0
+   }
+  },
+  {
+   "pill_id": "651620752_1",
+   "name": "benazepril hydrochloride 10 MG Oral Tablet",
+   "imprint": "52;A",
+   "tokens": {
+    "52": 0.8955
+   }
+  },
+  {
+   "pill_id": "003783856_1",
+   "name": "escitalopram 10 MG Oral Tablet",
+   "imprint": "M;EC;10",
+   "tokens": {
+    "10": 0.5213,
+    "EC": 0.8571
+   }
+  },
+  {
+   "pill_id": "658620009_1",
+   "name": "metformin hydrochloride 850 MG Oral Tablet",
+   "imprint": "A;13",
+   "tokens": {
+    "13": 0.7957
+   }
+  },
+  {
+   "pill_id": "504580251_1",
+   "name": "{7 (ethinyl estradiol 0.025 MG / norgestimate 0.18 MG Oral Tablet) / 7 (ethinyl estradiol 0.025 MG / norgestimate 0.215 MG Oral Tablet) / 7 (ethinyl estradiol 0.025 MG / norgestimate 0.25 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Ortho Tri-Cyclen Lo 28 Day]",
+   "imprint": "O;M;180",
+   "tokens": {
+    "180": 0.7865
+   }
+  },
+  {
+   "pill_id": "537460464_1",
+   "name": "ibuprofen 400 MG Oral Tablet",
+   "imprint": "IP;464",
+   "tokens": {
+    "464": 0.9538,
+    "IP": 0.699
+   }
+  },
+  {
+   "pill_id": "658620008_1",
+   "name": "metformin hydrochloride 500 MG Oral Tablet",
+   "imprint": "A;12",
+   "tokens": {
+    "12": 0.7032
+   }
+  },
+  {
+   "pill_id": "003780505_1",
+   "name": "bisoprolol fumarate 10 MG / hydrochlorothiazide 6.25 MG Oral Tablet",
+   "imprint": "M;505",
+   "tokens": {
+    "505": 1.0
+   }
+  },
+  {
+   "pill_id": "317220208_1",
+   "name": "citalopram 40 MG Oral Tablet",
+   "imprint": "208;I;G",
+   "tokens": {
+    "208": 0.8419
+   }
+  },
+  {
+   "pill_id": "435470335_1",
+   "name": "benazepril hydrochloride 5 MG Oral Tablet",
+   "imprint": "S;341",
+   "tokens": {
+    "341": 0.8571
+   }
+  },
+  {
+   "pill_id": "000930173_1",
+   "name": "leflunomide 10 MG Oral Tablet",
+   "imprint": "173;93",
+   "tokens": {
+    "93": 0.4414,
+    "173": 0.8955
+   }
+  },
+  {
+   "pill_id": "000935538_1",
+   "name": "eszopiclone 2 MG Oral Tablet",
+   "imprint": "93;E8",
+   "tokens": {
+    "E8": 1.0,
+    "93": 0.4414
+   }
+  },
+  {
+   "pill_id": "001861092_1",
+   "name": "24 HR metoprolol succinate 100 MG Extended Release Oral Tablet [Toprol]",
+   "imprint": "A;ms",
+   "tokens": {
+    "MS": 0.9538
+   }
+  },
+  {
+   "pill_id": "473350737_1",
+   "name": "12 HR bupropion hydrochloride 150 MG Extended Release Oral Tablet",
+   "imprint": "737",
+   "tokens": {
+    "737": 0.9538
+   }
+  },
+  {
+   "pill_id": "620370956_1",
+   "name": "famotidine 40 MG Oral Tablet",
+   "imprint": "956",
+   "tokens": {
+    "956": 0.9538
+   }
+  },
+  {
+   "pill_id": "002281453_1",
+   "name": "24 HR lamotrigine 200 MG Extended Release Oral Tablet",
+   "imprint": "453",
+   "tokens": {
+    "453": 0.8955
+   }
+  },
+  {
+   "pill_id": "655970103_1",
+   "name": "olmesartan medoxomil 20 MG Oral Tablet [Benicar]",
+   "imprint": "SANKYO;C14",
+   "tokens": {
+    "C14": 1.0,
+    "SANKYO": 0.8419
+   }
+  },
+  {
+   "pill_id": "684620360_1",
+   "name": "hydroxyzine hydrochloride 10 MG Oral Tablet",
+   "imprint": "IG;275",
+   "tokens": {
+    "275": 0.9538,
+    "IG": 0.7075
+   }
+  },
+  {
+   "pill_id": "003787732_1",
+   "name": "ondansetron 4 MG Disintegrating Oral Tablet",
+   "imprint": "M;732",
+   "tokens": {
+    "732": 1.0
+   }
+  },
+  {
+   "pill_id": "000935141_1",
+   "name": "alendronic acid 10 MG Oral Tablet",
+   "imprint": "93;5141",
+   "tokens": {
+    "93": 0.4414,
+    "5141": 1.0
+   }
+  },
+  {
+   "pill_id": "001151811_1",
+   "name": "flavoxate hydrochloride 100 MG Oral Tablet",
+   "imprint": "G;181",
+   "tokens": {
+    "181": 1.0
+   }
+  },
+  {
+   "pill_id": "510790145_1",
+   "name": "benazepril hydrochloride 10 MG Oral Tablet",
+   "imprint": "M;443",
+   "tokens": {
+    "443": 0.9538
+   }
+  },
+  {
+   "pill_id": "459630141_1",
+   "name": "24 HR bupropion hydrochloride 150 MG Extended Release Oral Tablet",
+   "imprint": "141",
+   "tokens": {
+    "141": 0.9209
+   }
+  },
+  {
+   "pill_id": "317220278_1",
+   "name": "topiramate 25 MG Oral Tablet",
+   "imprint": "IG;278",
+   "tokens": {
+    "278": 1.0,
+    "IG": 0.7075
+   }
+  },
+  {
+   "pill_id": "684620361_1",
+   "name": "hydroxyzine hydrochloride 25 MG Oral Tablet",
+   "imprint": "IG;276",
+   "tokens": {
+    "276": 1.0,
+    "IG": 0.7075
+   }
+  },
+  {
+   "pill_id": "138110627_1",
+   "name": "benazepril hydrochloride 5 MG Oral Tablet",
+   "imprint": "627",
+   "tokens": {
+    "627": 0.9538
+   }
+  },
+  {
+   "pill_id": "512850114_1",
+   "name": "{21 (desogestrel 0.15 MG / ethinyl estradiol 0.02 MG Oral Tablet) / 5 (ethinyl estradiol 0.01 MG Oral Tablet) / 2 (inert ingredients 1 MG Oral Tablet) } Pack [Mircette 28 Day]",
+   "imprint": "dp;021",
+   "tokens": {
+    "DP": 0.6475,
+    "021": 0.8747
+   }
+  },
+  {
+   "pill_id": "001730777_1",
+   "name": "lamotrigine 200 MG Disintegrating Oral Tablet [Lamictal]",
+   "imprint": "LAMICTAL;200",
+   "tokens": {
+    "200": 0.6179,
+    "LAMICTAL": 0.7494
+   }
+  },
+  {
+   "pill_id": "002282571_1",
+   "name": "indapamide 2.5 MG Oral Tablet",
+   "imprint": "R;571",
+   "tokens": {
+    "571": 0.9538
+   }
+  },
+  {
+   "pill_id": "658620391_1",
+   "name": "ondansetron 8 MG Disintegrating Oral Tablet",
+   "imprint": "7;E",
+   "tokens": {}
+  },
+  {
+   "pill_id": "684620435_1",
+   "name": "acamprosate calcium 333 MG Delayed Release Oral Tablet",
+   "imprint": "435",
+   "tokens": {
+    "435": 0.9209
+   }
+  },
+  {
+   "pill_id": "002281410_1",
+   "name": "24 HR lamotrigine 25 MG Extended Release Oral Tablet",
+   "imprint": "410",
+   "tokens": {
+    "410": 0.9209
+   }
+  },
+  {
+   "pill_id": "620370524_1",
+   "name": "hydrocodone bitartrate 7.5 MG / ibuprofen 200 MG Oral Tablet",
+   "imprint": "524",
+   "tokens": {
+    "524": 1.0
+   }
+  },
+  {
+   "pill_id": "633040772_1",
+   "name": "lorazepam 0.5 MG Oral Tablet",
+   "imprint": "RX;7",
+   "tokens": {
+    "RX": 0.7781
+   }
+  },
+  {
+   "pill_id": "678770294_1",
+   "name": "ibuprofen 400 MG Oral Tablet",
+   "imprint": "121",
+   "tokens": {
+    "121": 0.8747
+   }
+  },
+  {
+   "pill_id": "001723757_1",
+   "name": "lisinopril 2.5 MG Oral Tablet",
+   "imprint": "3757",
+   "tokens": {
+    "3757": 1.0
+   }
+  },
+  {
+   "pill_id": "658620062_1",
+   "name": "metoprolol tartrate 25 MG Oral Tablet",
+   "imprint": "C;73",
+   "tokens": {
+    "73": 0.8747
+   }
+  },
+  {
+   "pill_id": "317220302_1",
+   "name": "24 HR alfuzosin hydrochloride 10 MG Extended Release Oral Tablet",
+   "imprint": "IG;302",
+   "tokens": {
+    "302": 0.8571,
+    "IG": 0.7075
+   }
+  },
+  {
+   "pill_id": "005915513_1",
+   "name": "carisoprodol 350 MG Oral Tablet",
+   "imprint": "DAN;5513",
+   "tokens": {
+    "DAN": 0.6424,
+    "5513": 0.9538
+   }
+  },
+  {
+   "pill_id": "293000241_1",
+   "name": "amlodipine 2.5 MG Oral Tablet",
+   "imprint": "U;241",
+   "tokens": {
+    "241": 0.8571
+   }
+  },
+  {
+   "pill_id": "003783632_1",
+   "name": "carvedilol 6.25 MG Oral Tablet",
+   "imprint": "M;C32",
+   "tokens": {
+    "C32": 0.9538
+   }
+  },
+  {
+   "pill_id": "684620157_1",
+   "name": "ondansetron 4 MG Disintegrating Oral Tablet",
+   "imprint": "G;4",
+   "tokens": {}
+  },
+  {
+   "pill_id": "001850010_1",
+   "name": "labetalol hydrochloride 100 MG Oral Tablet",
+   "imprint": "E;10",
+   "tokens": {
+    "10": 0.5213
+   }
+  },
+  {
+   "pill_id": "473350736_1",
+   "name": "12 HR bupropion hydrochloride 100 MG Extended Release Oral Tablet",
+   "imprint": "736",
+   "tokens": {
+    "736": 1.0
+   }
+  },
+  {
+   "pill_id": "006037663_1",
+   "name": "{7 (ethinyl estradiol 0.035 MG / norgestimate 0.18 MG Oral Tablet) / 7 (ethinyl estradiol 0.035 MG / norgestimate 0.215 MG Oral Tablet) / 7 (ethinyl estradiol 0.035 MG / norgestimate 0.25 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Tri-Previfem 28 Day]",
+   "imprint": "93;746",
+   "tokens": {
+    "746": 0.9538,
+    "93": 0.4414
+   }
+  },
+  {
+   "pill_id": "512850443_1",
+   "name": "synthetic conjugated estrogens, A 0.9 MG Oral Tablet [Cenestin]",
+   "imprint": "dp;43",
+   "tokens": {
+    "DP": 0.6475,
+    "43": 0.8419
+   }
+  },
+  {
+   "pill_id": "431990011_1",
+   "name": "hyoscyamine sulfate 0.125 MG Sublingual Tablet",
+   "imprint": "CL;11",
+   "tokens": {
+    "11": 0.7075,
+    "CL": 0.7559
+   }
+  },
+  {
+   "pill_id": "005913256_1",
+   "name": "cyclobenzaprine hydrochloride 5 MG Oral Tablet",
+   "imprint": "WATSON;3256",
+   "tokens": {
+    "3256": 1.0,
+    "WATSON": 0.523
+   }
+  },
+  {
+   "pill_id": "003783857_1",
+   "name": "escitalopram 20 MG Oral Tablet",
+   "imprint": "M;EC;20",
+   "tokens": {
+    "20": 0.5851,
+    "EC": 0.8571
+   }
+  },
+  {
+   "pill_id": "000876060_1",
+   "name": "metformin hydrochloride 500 MG Oral Tablet [Glucophage]",
+   "imprint": "BMS;6060;500",
+   "tokens": {
+    "6060": 0.9209,
+    "500": 0.6449,
+    "BMS": 0.9209
+   }
+  },
+  {
+   "pill_id": "591480010_1",
+   "name": "aripiprazole 20 MG Oral Tablet [Abilify]",
+   "imprint": "A;010;20",
+   "tokens": {
+    "20": 0.5851,
+    "010": 0.8955
+   }
+  },
+  {
+   "pill_id": "005740250_1",
+   "name": "hyoscyamine sulfate 0.125 MG Sublingual Tablet",
+   "imprint": "H;PAD",
+   "tokens": {
+    "PAD": 0.8419
+   }
+  },
+  {
+   "pill_id": "684620159_1",
+   "name": "metformin hydrochloride 500 MG Oral Tablet",
+   "imprint": "G;45;500",
+   "tokens": {
+    "500": 0.6449,
+    "45": 0.7628
+   }
+  },
+  {
+   "pill_id": "576640435_1",
+   "name": "metformin hydrochloride 850 MG Oral Tablet",
+   "imprint": "435",
+   "tokens": {
+    "435": 0.9209
+   }
+  },
+  {
+   "pill_id": "006032110_1",
+   "name": "amlodipine 10 MG Oral Tablet",
+   "imprint": "2110;V",
+   "tokens": {
+    "2110": 1.0
+   }
+  },
+  {
+   "pill_id": "001850210_1",
+   "name": "methimazole 10 MG Oral Tablet",
+   "imprint": "E;210",
+   "tokens": {
+    "210": 0.8747
+   }
+  },
+  {
+   "pill_id": "620370831_1",
+   "name": "24 HR metoprolol succinate 50 MG Extended Release Oral Tablet",
+   "imprint": "831",
+   "tokens": {
+    "831": 0.9538
+   }
+  },
+  {
+   "pill_id": "473350738_1",
+   "name": "12 HR bupropion hydrochloride 200 MG Extended Release Oral Tablet",
+   "imprint": "738",
+   "tokens": {
+    "738": 0.9209
+   }
+  },
+  {
+   "pill_id": "540920513_1",
+   "name": "24 HR guanfacine 1 MG Extended Release Oral Tablet [Intuniv]",
+   "imprint": "503;1MG",
+   "tokens": {
+    "503": 0.8419,
+    "1MG": 1.0
+   }
+  },
+  {
+   "pill_id": "333420056_1",
+   "name": "pioglitazone 45 MG Oral Tablet",
+   "imprint": "ML;91",
+   "tokens": {
+    "ML": 0.7957,
+    "91": 0.9209
+   }
+  },
+  {
+   "pill_id": "620370793_1",
+   "name": "lovastatin 40 MG Oral Tablet",
+   "imprint": "793",
+   "tokens": {
+    "793": 1.0
+   }
+  },
+  {
+   "pill_id": "136680220_1",
+   "name": "aripiprazole 20 MG Oral Tablet",
+   "imprint": "20;20",
+   "tokens": {
+    "20": 0.5851
+   }
+  },
+  {
+   "pill_id": "231550102_1",
+   "name": "metformin hydrochloride 500 MG Oral Tablet",
+   "imprint": "H;102",
+   "tokens": {
+    "102": 0.7957
+   }
+  },
+  {
+   "pill_id": "167290022_1",
+   "name": "pioglitazone 45 MG Oral Tablet",
+   "imprint": "PIO;45",
+   "tokens": {
+    "45": 0.7628,
+    "PIO": 0.9538
+   }
+  },
+  {
+   "pill_id": "005550097_1",
+   "name": "clonazepam 1 MG Disintegrating Oral Tablet",
+   "imprint": "b;97;1",
+   "tokens": {
+    "97": 0.7957
+   }
+  },
+  {
+   "pill_id": "000938117_1",
+   "name": "famciclovir 125 MG Oral Tablet",
+   "imprint": "8117;93",
+   "tokens": {
+    "8117": 1.0,
+    "93": 0.4414
+   }
+  },
+  {
+   "pill_id": "003783131_1",
+   "name": "glipizide 2.5 MG / metformin hydrochloride 250 MG Oral Tablet",
+   "imprint": "M;G31",
+   "tokens": {
+    "G31": 1.0
+   }
+  },
+  {
+   "pill_id": "510790930_1",
+   "name": "carvedilol 6.25 MG Oral Tablet",
+   "imprint": "M;C32",
+   "tokens": {
+    "C32": 0.9538
+   }
+  },
+  {
+   "pill_id": "003780277_1",
+   "name": "amitriptyline hydrochloride 25 MG / chlordiazepoxide 10 MG Oral Tablet",
+   "imprint": "MYLAN;277",
+   "tokens": {
+    "277": 0.8747,
+    "MYLAN": 0.5697
+   }
+  },
+  {
+   "pill_id": "005559034_2",
+   "name": "{21 (ethinyl estradiol 0.035 MG / norethindrone 0.4 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Balziva 28 Day]",
+   "imprint": "b;944",
+   "tokens": {
+    "944": 0.8747
+   }
+  },
+  {
+   "pill_id": "003782146_1",
+   "name": "spironolactone 25 MG Oral Tablet",
+   "imprint": "M;146",
+   "tokens": {
+    "146": 0.9209
+   }
+  },
+  {
+   "pill_id": "668690104_1",
+   "name": "pitavastatin calcium 1 MG Oral Tablet [Livalo]",
+   "imprint": "1;KC",
+   "tokens": {
+    "KC": 0.8056
+   }
+  },
+  {
+   "pill_id": "001730778_3",
+   "name": "{7 (lamotrigine 100 MG Disintegrating Oral Tablet [Lamictal]) / 14 (lamotrigine 25 MG Disintegrating Oral Tablet [Lamictal]) / 14 (lamotrigine 50 MG Disintegrating Oral Tablet [Lamictal]) } Pack [Lamictal ODT Orange Patient Titration Kit (For Patients Not Taking Enzyme-Inducing Drugs or Valproate)]",
+   "imprint": "LAMICTAL;100",
+   "tokens": {
+    "100": 0.5978,
+    "LAMICTAL": 0.7494
+   }
+  },
+  {
+   "pill_id": "680120258_1",
+   "name": "bromocriptine 0.8 MG Oral Tablet [Cycloset]",
+   "imprint": "C;9",
+   "tokens": {}
+  },
+  {
+   "pill_id": "001151150_1",
+   "name": "acarbose 25 MG Oral Tablet",
+   "imprint": "E71",
+   "tokens": {
+    "E71": 1.0
+   }
+  },
+  {
+   "pill_id": "681800512_1",
+   "name": "lisinopril 2.5 MG Oral Tablet",
+   "imprint": "LUPIN;2;5",
+   "tokens": {
+    "LUPIN": 0.7559
+   }
+  },
+  {
+   "pill_id": "000935352_1",
+   "name": "acamprosate calcium 333 MG Delayed Release Oral Tablet",
+   "imprint": "77;1140",
+   "tokens": {
+    "77": 0.8056,
+    "1140": 1.0
+   }
+  },
+  {
+   "pill_id": "006037609_1",
+   "name": "{21 (ethinyl estradiol 0.02 MG / norethindrone acetate 1 MG Oral Tablet) / 7 (ferrous fumarate 75 MG Oral Tablet) } Pack [Gildess FE 1/20 28 Day]",
+   "imprint": "93;912",
+   "tokens": {
+    "93": 0.4414,
+    "912": 0.9538
+   }
+  },
+  {
+   "pill_id": "001730778_1",
+   "name": "{7 (lamotrigine 100 MG Disintegrating Oral Tablet [Lamictal]) / 14 (lamotrigine 25 MG Disintegrating Oral Tablet [Lamictal]) / 14 (lamotrigine 50 MG Disintegrating Oral Tablet [Lamictal]) } Pack [Lamictal ODT Orange Patient Titration Kit (For Patients Not Taking Enzyme-Inducing Drugs or Valproate)]",
+   "imprint": "LMT;25",
+   "tokens": {
+    "25": 0.5897,
+    "LMT": 0.8747
+   }
+  },
+  {
+   "pill_id": "000935260_1",
+   "name": "almotriptan 6.25 MG Oral Tablet",
+   "imprint": "93;A1",
+   "tokens": {
+    "93": 0.4414,
+    "A1": 0.8955
+   }
+  },
+  {
+   "pill_id": "138110684_1",
+   "name": "aripiprazole 30 MG Oral Tablet",
+   "imprint": "L;255",
+   "tokens": {
+    "255": 0.9538
+   }
+  },
+  {
+   "pill_id": "680010206_1",
+   "name": "labetalol hydrochloride 300 MG Oral Tablet",
+   "imprint": "E;118",
+   "tokens": {
+    "118": 0.8747
+   }
+  },
+  {
+   "pill_id": "167290168_1",
+   "name": "escitalopram 5 MG Oral Tablet",
+   "imprint": "5",
+   "tokens": {}
+  },
+  {
+   "pill_id": "006035371_1",
+   "name": "primidone 50 MG Oral Tablet",
+   "imprint": "51;30;V",
+   "tokens": {
+    "30": 0.6642,
+    "51": 0.7957
+   }
+  },
+  {
+   "pill_id": "614420143_1",
+   "name": "lovastatin 40 MG Oral Tablet",
+   "imprint": "CTI;143",
+   "tokens": {
+    "CTI": 0.8164,
+    "143": 0.8285
+   }
+  },
+  {
+   "pill_id": "620370832_1",
+   "name": "24 HR metoprolol succinate 100 MG Extended Release Oral Tablet",
+   "imprint": "832",
+   "tokens": {
+    "832": 0.7559
+   }
+  },
+  {
+   "pill_id": "006037610_1",
+   "name": "{24 (ethinyl estradiol 0.02 MG / norethindrone acetate 1 MG Oral Tablet) / 4 (ferrous fumarate 75 MG Oral Tablet) } Pack [Gildess 24 Fe 28 Day]",
+   "imprint": "93;912",
+   "tokens": {
+    "93": 0.4414,
+    "912": 0.9538
+   }
+  },
+  {
+   "pill_id": "516724124_1",
+   "name": "12 HR carbamazepine 200 MG Extended Release Oral Tablet",
+   "imprint": "T26",
+   "tokens": {
+    "T26": 1.0
+   }
+  },
+  {
+   "pill_id": "634590542_1",
+   "name": "fentanyl 0.2 MG Buccal Tablet [Fentora]",
+   "imprint": "2;C",
+   "tokens": {}
+  },
+  {
+   "pill_id": "683820022_1",
+   "name": "atenolol 25 MG Oral Tablet",
+   "imprint": "Z;65",
+   "tokens": {
+    "65": 0.8419
+   }
+  },
+  {
+   "pill_id": "005740246_1",
+   "name": "hyoscyamine sulfate 0.125 MG Oral Tablet",
+   "imprint": "PAD;H",
+   "tokens": {
+    "PAD": 0.8419
+   }
+  },
+  {
+   "pill_id": "003780353_1",
+   "name": "24 HR nifedipine 30 MG Extended Release Oral Tablet",
+   "imprint": "M;NE;30",
+   "tokens": {
+    "30": 0.6642,
+    "NE": 0.8955
+   }
+  },
+  {
+   "pill_id": "576640397_1",
+   "name": "metformin hydrochloride 500 MG Oral Tablet",
+   "imprint": "397",
+   "tokens": {
+    "397": 0.9209
+   }
+  },
+  {
+   "pill_id": "317220829_1",
+   "name": "aripiprazole 20 MG Oral Tablet",
+   "imprint": "I;98",
+   "tokens": {
+    "98": 0.8747
+   }
+  },
+  {
+   "pill_id": "690970126_1",
+   "name": "amlodipine 2.5 MG Oral Tablet",
+   "imprint": "126;C",
+   "tokens": {
+    "126": 0.8571
+   }
+  },
+  {
+   "pill_id": "293000243_1",
+   "name": "amlodipine 10 MG Oral Tablet",
+   "imprint": "U;243",
+   "tokens": {
+    "243": 0.9538
+   }
+  },
+  {
+   "pill_id": "167140300_1",
+   "name": "famciclovir 125 MG Oral Tablet",
+   "imprint": "X;48",
+   "tokens": {
+    "48": 0.8285
+   }
+  },
+  {
+   "pill_id": "002282633_1",
+   "name": "lovastatin 10 MG Oral Tablet",
+   "imprint": "R;633",
+   "tokens": {
+    "633": 0.9209
+   }
+  },
+  {
+   "pill_id": "005910606_1",
+   "name": "labetalol hydrochloride 200 MG Oral Tablet",
+   "imprint": "WATSON;606",
+   "tokens": {
+    "606": 0.9209,
+    "WATSON": 0.523
+   }
+  },
+  {
+   "pill_id": "501110917_1",
+   "name": "torsemide 20 MG Oral Tablet",
+   "imprint": "PA;917",
+   "tokens": {
+    "PA": 0.8747,
+    "917": 0.9538
+   }
+  },
+  {
+   "pill_id": "681800501_1",
+   "name": "meloxicam 7.5 MG Oral Tablet",
+   "imprint": "7;5",
+   "tokens": {}
+  },
+  {
+   "pill_id": "005913330_1",
+   "name": "cyclobenzaprine hydrochloride 7.5 MG Oral Tablet",
+   "imprint": "WATSON;3330",
+   "tokens": {
+    "3330": 1.0,
+    "WATSON": 0.523
+   }
+  },
+  {
+   "pill_id": "005914103_1",
+   "name": "perphenazine 8 MG Oral Tablet",
+   "imprint": "A;282",
+   "tokens": {
+    "282": 1.0
+   }
+  },
+  {
+   "pill_id": "655970110_1",
+   "name": "amlodipine 5 MG / olmesartan medoxomil 20 MG Oral Tablet [Azor]",
+   "imprint": "C73",
+   "tokens": {
+    "C73": 1.0
+   }
+  },
+  {
+   "pill_id": "005740145_1",
+   "name": "trospium chloride 20 MG Oral Tablet",
+   "imprint": "PAD;145",
+   "tokens": {
+    "145": 0.8164,
+    "PAD": 0.8419
+   }
+  },
+  {
+   "pill_id": "684620211_1",
+   "name": "amlodipine 5 MG Oral Tablet",
+   "imprint": "G58;5",
+   "tokens": {
+    "G58": 1.0
+   }
+  },
+  {
+   "pill_id": "005550617_1",
+   "name": "pramipexole dihydrochloride 0.125 MG Oral Tablet",
+   "imprint": "b;C;2",
+   "tokens": {}
+  },
+  {
+   "pill_id": "501110393_1",
+   "name": "benztropine mesylate 0.5 MG Oral Tablet",
+   "imprint": "b;1114",
+   "tokens": {
+    "1114": 1.0
+   }
+  },
+  {
+   "pill_id": "684620160_1",
+   "name": "metformin hydrochloride 850 MG Oral Tablet",
+   "imprint": "G;45;850",
+   "tokens": {
+    "850": 0.8747,
+    "45": 0.7628
+   }
+  },
+  {
+   "pill_id": "647200201_1",
+   "name": "ropinirole 0.25 MG Oral Tablet",
+   "imprint": "cor;201",
+   "tokens": {
+    "COR": 0.7166,
+    "201": 0.8747
+   }
+  },
+  {
+   "pill_id": "293000127_1",
+   "name": "bisoprolol fumarate 10 MG Oral Tablet",
+   "imprint": "UL;10",
+   "tokens": {
+    "10": 0.5213,
+    "UL": 0.8056
+   }
+  },
+  {
+   "pill_id": "001861090_1",
+   "name": "24 HR metoprolol succinate 50 MG Extended Release Oral Tablet [Toprol]",
+   "imprint": "A;mo",
+   "tokens": {
+    "MO": 0.9538
+   }
+  },
+  {
+   "pill_id": "655800304_1",
+   "name": "24 HR venlafaxine 225 MG Extended Release Oral Tablet",
+   "imprint": "OS;304",
+   "tokens": {
+    "304": 0.9209,
+    "OS": 0.8747
+   }
+  },
+  {
+   "pill_id": "607930104_1",
+   "name": "methimazole 5 MG Oral Tablet [Tapazole]",
+   "imprint": "J94",
+   "tokens": {
+    "J94": 1.0
+   }
+  },
+  {
+   "pill_id": "525440291_2",
+   "name": "{6 (ethinyl estradiol 0.03 MG / levonorgestrel 0.05 MG Oral Tablet) / 10 (ethinyl estradiol 0.03 MG / levonorgestrel 0.125 MG Oral Tablet) / 5 (ethinyl estradiol 0.04 MG / levonorgestrel 0.075 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Trivora 28 Day]",
+   "imprint": "WATSON;75;40",
+   "tokens": {
+    "40": 0.6352,
+    "75": 0.6838,
+    "WATSON": 0.523
+   }
+  },
+  {
+   "pill_id": "510790103_1",
+   "name": "spironolactone 25 MG Oral Tablet",
+   "imprint": "M;146",
+   "tokens": {
+    "146": 0.9209
+   }
+  },
+  {
+   "pill_id": "633040621_1",
+   "name": "atenolol 25 MG Oral Tablet",
+   "imprint": "RE;19",
+   "tokens": {
+    "19": 0.8571,
+    "RE": 0.8419
+   }
+  },
+  {
+   "pill_id": "005559010_2",
+   "name": "{21 (ethinyl estradiol 0.035 MG / norethindrone 1 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Nortrel 1/35 28 Day]",
+   "imprint": "b;944",
+   "tokens": {
+    "944": 0.8747
+   }
+  },
+  {
+   "pill_id": "006033900_1",
+   "name": "hydrocortisone 10 MG Oral Tablet",
+   "imprint": "35;79;V",
+   "tokens": {
+    "79": 0.9209,
+    "35": 0.7865
+   }
+  },
+  {
+   "pill_id": "501110916_1",
+   "name": "torsemide 10 MG Oral Tablet",
+   "imprint": "PA;916",
+   "tokens": {
+    "PA": 0.8747,
+    "916": 0.9538
+   }
+  },
+  {
+   "pill_id": "004562010_1",
+   "name": "escitalopram 10 MG Oral Tablet [Lexapro]",
+   "imprint": "F;L;10",
+   "tokens": {
+    "10": 0.5213
+   }
+  },
+  {
+   "pill_id": "633040623_1",
+   "name": "atenolol 100 MG Oral Tablet",
+   "imprint": "RE;21",
+   "tokens": {
+    "21": 0.7865,
+    "RE": 0.8419
+   }
+  },
+  {
+   "pill_id": "002283481_1",
+   "name": "zolpidem tartrate 6.25 MG Extended Release Oral Tablet",
+   "imprint": "A2",
+   "tokens": {
+    "A2": 0.8747
+   }
+  },
+  {
+   "pill_id": "007811391_1",
+   "name": "haloperidol 0.5 MG Oral Tablet",
+   "imprint": "GG;105",
+   "tokens": {
+    "105": 0.8571,
+    "GG": 0.571
+   }
+  },
+  {
+   "pill_id": "003780501_1",
+   "name": "bisoprolol fumarate 2.5 MG / hydrochlorothiazide 6.25 MG Oral Tablet",
+   "imprint": "M;501",
+   "tokens": {
+    "501": 0.8747
+   }
+  },
+  {
+   "pill_id": "614420142_1",
+   "name": "lovastatin 20 MG Oral Tablet",
+   "imprint": "CTI;142",
+   "tokens": {
+    "142": 0.8747,
+    "CTI": 0.8164
+   }
+  },
+  {
+   "pill_id": "651620753_1",
+   "name": "benazepril hydrochloride 20 MG Oral Tablet",
+   "imprint": "53;A",
+   "tokens": {
+    "53": 0.8056
+   }
+  },
+  {
+   "pill_id": "002282801_1",
+   "name": "pilocarpine hydrochloride 5 MG Oral Tablet",
+   "imprint": "SAL;5",
+   "tokens": {
+    "SAL": 0.8955
+   }
+  },
+  {
+   "pill_id": "005914104_1",
+   "name": "perphenazine 16 MG Oral Tablet",
+   "imprint": "A;283",
+   "tokens": {
+    "283": 1.0
+   }
+  },
+  {
+   "pill_id": "634590546_1",
+   "name": "fentanyl 0.6 MG Buccal Tablet [Fentora]",
+   "imprint": "6;C",
+   "tokens": {}
+  },
+  {
+   "pill_id": "596300658_1",
+   "name": "12 HR clonidine hydrochloride 0.1 MG Extended Release Oral Tablet [Kapvay]",
+   "imprint": "651",
+   "tokens": {
+    "651": 1.0
+   }
+  },
+  {
+   "pill_id": "003780441_1",
+   "name": "benazepril hydrochloride 5 MG Oral Tablet",
+   "imprint": "M;441",
+   "tokens": {
+    "441": 0.9209
+   }
+  },
+  {
+   "pill_id": "000930784_1",
+   "name": "tamoxifen 10 MG Oral Tablet",
+   "imprint": "93;784",
+   "tokens": {
+    "93": 0.4414,
+    "784": 1.0
+   }
+  },
+  {
+   "pill_id": "683820227_1",
+   "name": "amiodarone hydrochloride 200 MG Oral Tablet",
+   "imprint": "ZE;65",
+   "tokens": {
+    "ZE": 0.8571,
+    "65": 0.8419
+   }
+  },
+  {
+   "pill_id": "167290021_1",
+   "name": "pioglitazone 30 MG Oral Tablet",
+   "imprint": "PIO;30",
+   "tokens": {
+    "30": 0.6642,
+    "PIO": 0.9538
+   }
+  },
+  {
+   "pill_id": "002584000_1",
+   "name": "acamprosate calcium 333 MG Delayed Release Oral Tablet",
+   "imprint": "333",
+   "tokens": {
+    "333": 0.8571
+   }
+  },
+  {
+   "pill_id": "293000242_1",
+   "name": "amlodipine 5 MG Oral Tablet",
+   "imprint": "U;242",
+   "tokens": {
+    "242": 0.9538
+   }
+  },
+  {
+   "pill_id": "628560245_1",
+   "name": "donepezil hydrochloride 5 MG Oral Tablet [Aricept]",
+   "imprint": "5;ARICEPT",
+   "tokens": {
+    "ARICEPT": 0.9209
+   }
+  },
+  {
+   "pill_id": "001730569_1",
+   "name": "ondansetron 4 MG Disintegrating Oral Tablet [Zofran]",
+   "imprint": "Z4",
+   "tokens": {
+    "Z4": 1.0
+   }
+  },
+  {
+   "pill_id": "605053110_1",
+   "name": "olanzapine 2.5 MG Oral Tablet",
+   "imprint": "APO;OLA;2;5",
+   "tokens": {
+    "APO": 0.5538,
+    "OLA": 0.8747
+   }
+  },
+  {
+   "pill_id": "006035763_1",
+   "name": "spironolactone 25 MG Oral Tablet",
+   "imprint": "5880;V",
+   "tokens": {
+    "5880": 1.0
+   }
+  },
+  {
+   "pill_id": "007811683_1",
+   "name": "cetirizine hydrochloride 5 MG Oral Tablet",
+   "imprint": "SZ;905",
+   "tokens": {
+    "SZ": 0.7119,
+    "905": 1.0
+   }
+  },
+  {
+   "pill_id": "003780023_1",
+   "name": "diltiazem hydrochloride 30 MG Oral Tablet",
+   "imprint": "M;23",
+   "tokens": {
+    "23": 0.8285
+   }
+  },
+  {
+   "pill_id": "005559012_4",
+   "name": "{7 (ethinyl estradiol 0.035 MG / norethindrone 0.5 MG Oral Tablet) / 7 (ethinyl estradiol 0.035 MG / norethindrone 0.75 MG Oral Tablet) / 7 (ethinyl estradiol 0.035 MG / norethindrone 1 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Nortrel 7/7/7 28 Day]",
+   "imprint": "b;944",
+   "tokens": {
+    "944": 0.8747
+   }
+  },
+  {
+   "pill_id": "003784140_1",
+   "name": "disulfiram 250 MG Oral Tablet",
+   "imprint": "M;DS;2",
+   "tokens": {
+    "DS": 0.8955
+   }
+  },
+  {
+   "pill_id": "167290170_1",
+   "name": "escitalopram 20 MG Oral Tablet",
+   "imprint": "20",
+   "tokens": {
+    "20": 0.5851
+   }
+  },
+  {
+   "pill_id": "006032109_1",
+   "name": "amlodipine 5 MG Oral Tablet",
+   "imprint": "2109;V",
+   "tokens": {
+    "2109": 1.0
+   }
+  },
+  {
+   "pill_id": "005559066_2",
+   "name": "{12 (ethinyl estradiol 0.035 MG / norethindrone 0.5 MG Oral Tablet) / 9 (ethinyl estradiol 0.035 MG / norethindrone 1 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Aranelle 28]",
+   "imprint": "b;342",
+   "tokens": {
+    "342": 0.7957
+   }
+  },
+  {
+   "pill_id": "005559043_2",
+   "name": "{21 (desogestrel 0.15 MG / ethinyl estradiol 0.03 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Apri 28 Day]",
+   "imprint": "dp;570",
+   "tokens": {
+    "570": 0.9538,
+    "DP": 0.6475
+   }
+  },
+  {
+   "pill_id": "684620158_1",
+   "name": "ondansetron 8 MG Disintegrating Oral Tablet",
+   "imprint": "G;8",
+   "tokens": {}
+  },
+  {
+   "pill_id": "658620064_1",
+   "name": "metoprolol tartrate 100 MG Oral Tablet",
+   "imprint": "C;75",
+   "tokens": {
+    "75": 0.6838
+   }
+  },
+  {
+   "pill_id": "000930233_1",
+   "name": "ondansetron 4 MG Oral Tablet",
+   "imprint": "93;233",
+   "tokens": {
+    "93": 0.4414,
+    "233": 0.9538
+   }
+  },
+  {
+   "pill_id": "000930150_1",
+   "name": "acetaminophen 300 MG / codeine phosphate 30 MG Oral Tablet",
+   "imprint": "3;93;150",
+   "tokens": {
+    "150": 0.6838,
+    "93": 0.4414
+   }
+  },
+  {
+   "pill_id": "003786615_1",
+   "name": "24 HR oxybutynin chloride 15 MG Extended Release Oral Tablet",
+   "imprint": "M;O15",
+   "tokens": {
+    "O15": 1.0
+   }
+  },
+  {
+   "pill_id": "317220237_1",
+   "name": "amlodipine 2.5 MG Oral Tablet",
+   "imprint": "237;IG",
+   "tokens": {
+    "237": 0.9538,
+    "IG": 0.7075
+   }
+  },
+  {
+   "pill_id": "477810108_1",
+   "name": "exemestane 25 MG Oral Tablet",
+   "imprint": "25",
+   "tokens": {
+    "25": 0.5897
+   }
+  },
+  {
+   "pill_id": "003780216_1",
+   "name": "furosemide 40 MG Oral Tablet",
+   "imprint": "MYLAN;216;40",
+   "tokens": {
+    "40": 0.6352,
+    "216": 0.9538,
+    "MYLAN": 0.5697
+   }
+  },
+  {
+   "pill_id": "503830565_1",
+   "name": "neomycin sulfate 500 MG Oral Tablet",
+   "imprint": "500;P;T",
+   "tokens": {
+    "500": 0.6449
+   }
+  },
+  {
+   "pill_id": "435470362_1",
+   "name": "losartan potassium 100 MG Oral Tablet",
+   "imprint": "S;113",
+   "tokens": {
+    "113": 0.8571
+   }
+  },
+  {
+   "pill_id": "000930109_1",
+   "name": "carbamazepine 200 MG Oral Tablet",
+   "imprint": "109;T",
+   "tokens": {
+    "109": 0.9209
+   }
+  },
+  {
+   "pill_id": "501110333_1",
+   "name": "metronidazole 250 MG Oral Tablet",
+   "imprint": "PLIVA;333",
+   "tokens": {
+    "PLIVA": 0.6769,
+    "333": 0.8571
+   }
+  },
+  {
+   "pill_id": "003781454_1",
+   "name": "estradiol 1 MG Oral Tablet",
+   "imprint": "E;4;M",
+   "tokens": {}
+  },
+  {
+   "pill_id": "596300702_1",
+   "name": "prednisolone 30 MG Disintegrating Oral Tablet [Orapred]",
+   "imprint": "ORA;30",
+   "tokens": {
+    "30": 0.6642,
+    "ORA": 0.9538
+   }
+  },
+  {
+   "pill_id": "000935261_1",
+   "name": "almotriptan 12.5 MG Oral Tablet",
+   "imprint": "93;A2",
+   "tokens": {
+    "93": 0.4414,
+    "A2": 0.8747
+   }
+  },
+  {
+   "pill_id": "534890139_1",
+   "name": "prednisone 10 MG Oral Tablet",
+   "imprint": "MP;52",
+   "tokens": {
+    "52": 0.8955,
+    "MP": 0.6501
+   }
+  },
+  {
+   "pill_id": "003100209_1",
+   "name": "zolmitriptan 2.5 MG Disintegrating Oral Tablet [Zomig]",
+   "imprint": "Z",
+   "tokens": {}
+  },
+  {
+   "pill_id": "000935208_1",
+   "name": "24 HR oxybutynin chloride 15 MG Extended Release Oral Tablet",
+   "imprint": "G;343",
+   "tokens": {
+    "343": 0.8056
+   }
+  },
+  {
+   "pill_id": "001828203_1",
+   "name": "labetalol hydrochloride 200 MG Oral Tablet",
+   "imprint": "4365;200",
+   "tokens": {
+    "200": 0.6179,
+    "4365": 0.9538
+   }
+  },
+  {
+   "pill_id": "596300701_1",
+   "name": "prednisolone 15 MG Disintegrating Oral Tablet [Orapred]",
+   "imprint": "ORA;15",
+   "tokens": {
+    "ORA": 0.9538,
+    "15": 0.6475
+   }
+  },
+  {
+   "pill_id": "685460229_1",
+   "name": "rasagiline 1 MG Oral Tablet [Azilect]",
+   "imprint": "GIL;1",
+   "tokens": {
+    "GIL": 0.8955
+   }
+  },
+  {
+   "pill_id": "655800303_1",
+   "name": "24 HR venlafaxine 150 MG Extended Release Oral Tablet",
+   "imprint": "OS;303",
+   "tokens": {
+    "303": 0.8747,
+    "OS": 0.8747
+   }
+  },
+  {
+   "pill_id": "006036240_1",
+   "name": "trihexyphenidyl hydrochloride 2 MG Oral Tablet",
+   "imprint": "5971;V",
+   "tokens": {
+    "5971": 1.0
+   }
+  },
+  {
+   "pill_id": "001850117_1",
+   "name": "labetalol hydrochloride 200 MG Oral Tablet",
+   "imprint": "E;117",
+   "tokens": {
+    "117": 0.9209
+   }
+  },
+  {
+   "pill_id": "103700533_1",
+   "name": "24 HR guanfacine 1 MG Extended Release Oral Tablet",
+   "imprint": "A533;1;mg",
+   "tokens": {
+    "A533": 1.0,
+    "MG": 0.4703
+   }
+  },
+  {
+   "pill_id": "005559008_2",
+   "name": "{21 (ethinyl estradiol 0.035 MG / norethindrone 0.5 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Nortrel 0.5/35 28 Day]",
+   "imprint": "b;944",
+   "tokens": {
+    "944": 0.8747
+   }
+  },
+  {
+   "pill_id": "005912230_1",
+   "name": "mirtazapine 15 MG Disintegrating Oral Tablet",
+   "imprint": "b;241",
+   "tokens": {
+    "241": 0.8571
+   }
+  },
+  {
+   "pill_id": "007815325_1",
+   "name": "bromocriptine 2.5 MG Oral Tablet",
+   "imprint": "BCT;2;1;2",
+   "tokens": {
+    "BCT": 1.0
+   }
+  },
+  {
+   "pill_id": "231550121_1",
+   "name": "ropinirole 0.25 MG Oral Tablet",
+   "imprint": "H;121",
+   "tokens": {
+    "121": 0.8747
+   }
+  },
+  {
+   "pill_id": "167140571_1",
+   "name": "bicalutamide 50 MG Oral Tablet",
+   "imprint": "B;50",
+   "tokens": {
+    "50": 0.5897
+   }
+  },
+  {
+   "pill_id": "007811526_1",
+   "name": "potassium chloride 10 MEQ Extended Release Oral Tablet",
+   "imprint": "USL;10",
+   "tokens": {
+    "10": 0.5213,
+    "USL": 0.8955
+   }
+  },
+  {
+   "pill_id": "668690204_1",
+   "name": "pitavastatin calcium 2 MG Oral Tablet [Livalo]",
+   "imprint": "2;KC",
+   "tokens": {
+    "KC": 0.8056
+   }
+  },
+  {
+   "pill_id": "001730778_2",
+   "name": "{7 (lamotrigine 100 MG Disintegrating Oral Tablet [Lamictal]) / 14 (lamotrigine 25 MG Disintegrating Oral Tablet [Lamictal]) / 14 (lamotrigine 50 MG Disintegrating Oral Tablet [Lamictal]) } Pack [Lamictal ODT Orange Patient Titration Kit (For Patients Not Taking Enzyme-Inducing Drugs or Valproate)]",
+   "imprint": "LMT;50",
+   "tokens": {
+    "LMT": 0.8747,
+    "50": 0.5897
+   }
+  },
+  {
+   "pill_id": "001724365_1",
+   "name": "labetalol hydrochloride 200 MG Oral Tablet",
+   "imprint": "4365;TEVA",
+   "tokens": {
+    "TEVA": 0.5099,
+    "4365": 0.9538
+   }
+  },
+  {
+   "pill_id": "683820097_1",
+   "name": "paroxetine hydrochloride 10 MG Oral Tablet",
+   "imprint": "ZC;15",
+   "tokens": {
+    "ZC": 0.7865,
+    "15": 0.6475
+   }
+  },
+  {
+   "pill_id": "655800302_1",
+   "name": "24 HR venlafaxine 75 MG Extended Release Oral Tablet",
+   "imprint": "OS;302",
+   "tokens": {
+    "302": 0.8571,
+    "OS": 0.8747
+   }
+  },
+  {
+   "pill_id": "633040579_1",
+   "name": "metoprolol tartrate 25 MG Oral Tablet",
+   "imprint": "RE;79",
+   "tokens": {
+    "RE": 0.8419,
+    "79": 0.9209
+   }
+  },
+  {
+   "pill_id": "003780712_1",
+   "name": "enalapril maleate 5 MG / hydrochlorothiazide 12.5 MG Oral Tablet",
+   "imprint": "M;712",
+   "tokens": {
+    "712": 0.8571
+   }
+  },
+  {
+   "pill_id": "001850118_1",
+   "name": "labetalol hydrochloride 300 MG Oral Tablet",
+   "imprint": "E;118",
+   "tokens": {
+    "118": 0.8747
+   }
+  },
+  {
+   "pill_id": "677670141_1",
+   "name": "24 HR bupropion hydrochloride 150 MG Extended Release Oral Tablet",
+   "imprint": "141",
+   "tokens": {
+    "141": 0.9209
+   }
+  },
+  {
+   "pill_id": "001724431_1",
+   "name": "misoprostol 0.2 MG Oral Tablet",
+   "imprint": "200;4431",
+   "tokens": {
+    "4431": 1.0,
+    "200": 0.6179
+   }
+  },
+  {
+   "pill_id": "136680136_1",
+   "name": "escitalopram 10 MG Oral Tablet",
+   "imprint": "11;36;10",
+   "tokens": {
+    "11": 0.7075,
+    "10": 0.5213,
+    "36": 0.8747
+   }
+  },
+  {
+   "pill_id": "162520541_1",
+   "name": "trandolapril 1 MG Oral Tablet",
+   "imprint": "TN;1",
+   "tokens": {
+    "TN": 0.8955
+   }
+  },
+  {
+   "pill_id": "605053111_1",
+   "name": "olanzapine 5 MG Oral Tablet",
+   "imprint": "APO;OLA;5",
+   "tokens": {
+    "APO": 0.5538,
+    "OLA": 0.8747
+   }
+  },
+  {
+   "pill_id": "620370674_1",
+   "name": "metformin hydrochloride 500 MG Oral Tablet",
+   "imprint": "ANDRX;674;500",
+   "tokens": {
+    "674": 1.0,
+    "500": 0.6449,
+    "ANDRX": 0.7494
+   }
+  },
+  {
+   "pill_id": "597620245_1",
+   "name": "donepezil hydrochloride 5 MG Oral Tablet",
+   "imprint": "5;G",
+   "tokens": {}
+  },
+  {
+   "pill_id": "003780503_1",
+   "name": "bisoprolol fumarate 5 MG / hydrochlorothiazide 6.25 MG Oral Tablet",
+   "imprint": "M;503",
+   "tokens": {
+    "503": 0.8419
+   }
+  },
+  {
+   "pill_id": "643800759_1",
+   "name": "acarbose 50 MG Oral Tablet",
+   "imprint": "P211;50",
+   "tokens": {
+    "50": 0.5897,
+    "P211": 1.0
+   }
+  },
+  {
+   "pill_id": "000540036_1",
+   "name": "clarithromycin 250 MG Oral Tablet",
+   "imprint": "54;271",
+   "tokens": {
+    "271": 0.8571,
+    "54": 0.5913
+   }
+  },
+  {
+   "pill_id": "649800123_1",
+   "name": "cyproheptadine hydrochloride 4 MG Oral Tablet",
+   "imprint": "cor;150",
+   "tokens": {
+    "COR": 0.7166,
+    "150": 0.6838
+   }
+  },
+  {
+   "pill_id": "103700257_1",
+   "name": "12 HR clonidine hydrochloride 0.1 MG Extended Release Oral Tablet",
+   "imprint": "A;257",
+   "tokens": {
+    "257": 0.8164
+   }
+  },
+  {
+   "pill_id": "003780045_1",
+   "name": "diltiazem hydrochloride 60 MG Oral Tablet",
+   "imprint": "M;45",
+   "tokens": {
+    "45": 0.7628
+   }
+  },
+  {
+   "pill_id": "003789290_1",
+   "name": "selegiline hydrochloride 5 MG Oral Tablet",
+   "imprint": "G;SE;5",
+   "tokens": {
+    "SE": 1.0
+   }
+  },
+  {
+   "pill_id": "000930083_1",
+   "name": "amlodipine 2.5 MG Oral Tablet",
+   "imprint": "93;83",
+   "tokens": {
+    "83": 0.8571,
+    "93": 0.4414
+   }
+  },
+  {
+   "pill_id": "005915052_1",
+   "name": "prednisone 5 MG Oral Tablet",
+   "imprint": "DAN;DAN;5052",
+   "tokens": {
+    "DAN": 0.6424,
+    "5052": 1.0
+   }
+  },
+  {
+   "pill_id": "525440936_1",
+   "name": "{7 (ethinyl estradiol 0.035 MG / norethindrone 0.5 MG Oral Tablet) / 7 (ethinyl estradiol 0.035 MG / norethindrone 0.75 MG Oral Tablet) / 7 (ethinyl estradiol 0.035 MG / norethindrone 1 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Necon 7/7/7 28 Day]",
+   "imprint": "WATSON;937",
+   "tokens": {
+    "937": 0.9538,
+    "WATSON": 0.523
+   }
+  },
+  {
+   "pill_id": "498840406_1",
+   "name": "24 HR metoprolol succinate 100 MG Extended Release Oral Tablet",
+   "imprint": "m;100",
+   "tokens": {
+    "100": 0.5978
+   }
+  },
+  {
+   "pill_id": "000938120_1",
+   "name": "doxazosin 1 MG Oral Tablet",
+   "imprint": "N;590;1",
+   "tokens": {
+    "590": 0.9209
+   }
+  },
+  {
+   "pill_id": "003782074_1",
+   "name": "lisinopril 10 MG Oral Tablet",
+   "imprint": "L;24;M",
+   "tokens": {
+    "24": 0.8164
+   }
+  },
+  {
+   "pill_id": "685460142_1",
+   "name": "rasagiline 0.5 MG Oral Tablet [Azilect]",
+   "imprint": "GIL;0;5",
+   "tokens": {
+    "GIL": 0.8955
+   }
+  },
+  {
+   "pill_id": "006033213_1",
+   "name": "diazepam 2 MG Oral Tablet",
+   "imprint": "2682;V",
+   "tokens": {
+    "2682": 1.0
+   }
+  },
+  {
+   "pill_id": "655800301_1",
+   "name": "24 HR venlafaxine 37.5 MG Extended Release Oral Tablet",
+   "imprint": "OS;301",
+   "tokens": {
+    "OS": 0.8747,
+    "301": 1.0
+   }
+  },
+  {
+   "pill_id": "002283083_1",
+   "name": "24 HR alprazolam 0.5 MG Extended Release Oral Tablet",
+   "imprint": "R;83",
+   "tokens": {
+    "83": 0.8571
+   }
+  },
+  {
+   "pill_id": "000931177_1",
+   "name": "neomycin sulfate 500 MG Oral Tablet",
+   "imprint": "93;1177",
+   "tokens": {
+    "93": 0.4414,
+    "1177": 1.0
+   }
+  },
+  {
+   "pill_id": "498840827_1",
+   "name": "24 HR metoprolol succinate 100 MG Extended Release Oral Tablet",
+   "imprint": "A;ms",
+   "tokens": {
+    "MS": 0.9538
+   }
+  },
+  {
+   "pill_id": "597627021_1",
+   "name": "glyburide 2.5 MG Oral Tablet",
+   "imprint": "3;0;A",
+   "tokens": {}
+  },
+  {
+   "pill_id": "459630633_1",
+   "name": "lovastatin 10 MG Oral Tablet",
+   "imprint": "633",
+   "tokens": {
+    "633": 0.9209
+   }
+  },
+  {
+   "pill_id": "498840826_1",
+   "name": "24 HR metoprolol succinate 50 MG Extended Release Oral Tablet",
+   "imprint": "A;mo",
+   "tokens": {
+    "MO": 0.9538
+   }
+  },
+  {
+   "pill_id": "534890135_1",
+   "name": "metronidazole 250 MG Oral Tablet",
+   "imprint": "MP;45",
+   "tokens": {
+    "45": 0.7628,
+    "MP": 0.6501
+   }
+  },
+  {
+   "pill_id": "000540077_1",
+   "name": "torsemide 20 MG Oral Tablet",
+   "imprint": "54;017",
+   "tokens": {
+    "017": 1.0,
+    "54": 0.5913
+   }
+  },
+  {
+   "pill_id": "473350956_1",
+   "name": "24 HR alfuzosin hydrochloride 10 MG Extended Release Oral Tablet",
+   "imprint": "956",
+   "tokens": {
+    "956": 0.9538
+   }
+  },
+  {
+   "pill_id": "000930010_1",
+   "name": "tolterodine tartrate 1 MG Oral Tablet",
+   "imprint": "93;0010",
+   "tokens": {
+    "93": 0.4414,
+    "0010": 1.0
+   }
+  },
+  {
+   "pill_id": "000930220_1",
+   "name": "bicalutamide 50 MG Oral Tablet",
+   "imprint": "93;220",
+   "tokens": {
+    "93": 0.4414,
+    "220": 0.9209
+   }
+  },
+  {
+   "pill_id": "005913206_1",
+   "name": "pioglitazone 30 MG Oral Tablet",
+   "imprint": "W;30",
+   "tokens": {
+    "30": 0.6642
+   }
+  },
+  {
+   "pill_id": "551110153_1",
+   "name": "ondansetron 4 MG Oral Tablet",
+   "imprint": "R;153",
+   "tokens": {
+    "153": 0.8955
+   }
+  },
+  {
+   "pill_id": "167140041_1",
+   "name": "allopurinol 100 MG Oral Tablet",
+   "imprint": "N020",
+   "tokens": {
+    "N020": 1.0
+   }
+  },
+  {
+   "pill_id": "683820140_1",
+   "name": "topiramate 100 MG Oral Tablet",
+   "imprint": "ZD;14",
+   "tokens": {
+    "ZD": 0.8955,
+    "14": 0.8164
+   }
+  },
+  {
+   "pill_id": "000933122_1",
+   "name": "ethinyl estradiol 0.005 MG / norethindrone acetate 1 MG Oral Tablet [Jinteli]",
+   "imprint": "b;125",
+   "tokens": {
+    "125": 0.7374
+   }
+  },
+  {
+   "pill_id": "000932048_1",
+   "name": "pioglitazone 15 MG Oral Tablet",
+   "imprint": "ACTOS;15",
+   "tokens": {
+    "ACTOS": 0.8571,
+    "15": 0.6475
+   }
+  },
+  {
+   "pill_id": "551110626_1",
+   "name": "zafirlukast 20 MG Oral Tablet",
+   "imprint": "R;626",
+   "tokens": {
+    "626": 1.0
+   }
+  },
+  {
+   "pill_id": "597622858_1",
+   "name": "exemestane 25 MG Oral Tablet",
+   "imprint": "2858",
+   "tokens": {
+    "2858": 1.0
+   }
+  },
+  {
+   "pill_id": "000937167_1",
+   "name": "amlodipine 5 MG Oral Tablet",
+   "imprint": "93;7167",
+   "tokens": {
+    "93": 0.4414,
+    "7167": 1.0
+   }
+  },
+  {
+   "pill_id": "000932047_1",
+   "name": "pioglitazone 30 MG Oral Tablet",
+   "imprint": "ACTOS;30",
+   "tokens": {
+    "ACTOS": 0.8571,
+    "30": 0.6642
+   }
+  },
+  {
+   "pill_id": "435470280_1",
+   "name": "escitalopram 5 MG Oral Tablet",
+   "imprint": "P;5",
+   "tokens": {}
+  },
+  {
+   "pill_id": "003783121_1",
+   "name": "repaglinide 0.5 MG Oral Tablet",
+   "imprint": "M;R21",
+   "tokens": {
+    "R21": 1.0
+   }
+  },
+  {
+   "pill_id": "000937271_1",
+   "name": "pioglitazone 15 MG Oral Tablet",
+   "imprint": "TEVA;7271",
+   "tokens": {
+    "TEVA": 0.5099,
+    "7271": 1.0
+   }
+  },
+  {
+   "pill_id": "006032338_1",
+   "name": "acetaminophen 300 MG / codeine phosphate 30 MG Oral Tablet",
+   "imprint": "2064;V;3",
+   "tokens": {
+    "2064": 1.0
+   }
+  },
+  {
+   "pill_id": "000930041_1",
+   "name": "clomiphene citrate 50 MG Oral Tablet",
+   "imprint": "93;41",
+   "tokens": {
+    "93": 0.4414,
+    "41": 0.7865
+   }
+  },
+  {
+   "pill_id": "000744552_1",
+   "name": "levothyroxine sodium 0.05 MG Oral Tablet [Synthroid]",
+   "imprint": "SYNTHROID;50",
+   "tokens": {
+    "SYNTHROID": 0.7865,
+    "50": 0.5897
+   }
+  },
+  {
+   "pill_id": "006035337_1",
+   "name": "prednisone 5 MG Oral Tablet",
+   "imprint": "50;94;V",
+   "tokens": {
+    "50": 0.5897,
+    "94": 0.8955
+   }
+  },
+  {
+   "pill_id": "001157033_1",
+   "name": "fludrocortisone acetate 0.1 MG Oral Tablet",
+   "imprint": "7033",
+   "tokens": {
+    "7033": 1.0
+   }
+  },
+  {
+   "pill_id": "684620499_1",
+   "name": "zolmitriptan 2.5 MG Disintegrating Oral Tablet",
+   "imprint": "F7",
+   "tokens": {
+    "F7": 1.0
+   }
+  },
+  {
+   "pill_id": "006032950_1",
+   "name": "clonazepam 2 MG Oral Tablet",
+   "imprint": "v;2532",
+   "tokens": {
+    "2532": 1.0
+   }
+  },
+  {
+   "pill_id": "003782003_1",
+   "name": "24 HR paroxetine hydrochloride 12.5 MG Extended Release Oral Tablet",
+   "imprint": "M;P3",
+   "tokens": {
+    "P3": 1.0
+   }
+  },
+  {
+   "pill_id": "009041748_1",
+   "name": "ibuprofen 400 MG Oral Tablet",
+   "imprint": "IP;131;400",
+   "tokens": {
+    "400": 0.7628,
+    "IP": 0.699,
+    "131": 0.8747
+   }
+  },
+  {
+   "pill_id": "000251411_1",
+   "name": "diclofenac sodium 50 MG / misoprostol 0.2 MG Delayed Release Oral Tablet [Arthrotec]",
+   "imprint": "SEARLE;1411;A;A;A;A;50",
+   "tokens": {
+    "50": 0.5897,
+    "SEARLE": 0.9538,
+    "1411": 1.0
+   }
+  },
+  {
+   "pill_id": "003780771_1",
+   "name": "cyclobenzaprine hydrochloride 5 MG Oral Tablet",
+   "imprint": "M;771",
+   "tokens": {
+    "771": 0.8571
+   }
+  },
+  {
+   "pill_id": "005559047_2",
+   "name": "{6 (ethinyl estradiol 0.03 MG / levonorgestrel 0.05 MG Oral Tablet) / 10 (ethinyl estradiol 0.03 MG / levonorgestrel 0.125 MG Oral Tablet) / 5 (ethinyl estradiol 0.04 MG / levonorgestrel 0.075 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Enpresse 28 Day]",
+   "imprint": "dp;511",
+   "tokens": {
+    "DP": 0.6475,
+    "511": 0.8571
+   }
+  },
+  {
+   "pill_id": "002282550_1",
+   "name": "diclofenac sodium 50 MG Delayed Release Oral Tablet",
+   "imprint": "R;550",
+   "tokens": {
+    "550": 0.9538
+   }
+  },
+  {
+   "pill_id": "006035335_1",
+   "name": "prednisone 1 MG Oral Tablet",
+   "imprint": "50;84;V",
+   "tokens": {
+    "50": 0.5897,
+    "84": 0.8571
+   }
+  },
+  {
+   "pill_id": "231550103_1",
+   "name": "metformin hydrochloride 850 MG Oral Tablet",
+   "imprint": "H;103",
+   "tokens": {
+    "103": 0.8571
+   }
+  },
+  {
+   "pill_id": "620370675_1",
+   "name": "metformin hydrochloride 850 MG Oral Tablet",
+   "imprint": "ANDRX;675;850",
+   "tokens": {
+    "675": 1.0,
+    "850": 0.8747,
+    "ANDRX": 0.7494
+   }
+  },
+  {
+   "pill_id": "003780415_1",
+   "name": "atropine sulfate 0.025 MG / diphenoxylate hydrochloride 2.5 MG Oral Tablet",
+   "imprint": "M;15",
+   "tokens": {
+    "15": 0.6475
+   }
+  },
+  {
+   "pill_id": "001431771_1",
+   "name": "isosorbide dinitrate 10 MG Oral Tablet",
+   "imprint": "W;W;771",
+   "tokens": {
+    "771": 0.8571
+   }
+  },
+  {
+   "pill_id": "000932070_1",
+   "name": "doxazosin 1 MG Oral Tablet",
+   "imprint": "590;TV",
+   "tokens": {
+    "TV": 0.5765,
+    "590": 0.9209
+   }
+  },
+  {
+   "pill_id": "534890677_1",
+   "name": "fenofibric acid 35 MG Oral Tablet",
+   "imprint": "AR787",
+   "tokens": {
+    "AR787": 1.0
+   }
+  },
+  {
+   "pill_id": "449461009_1",
+   "name": "sodium fluoride 1.1 MG Chewable Tablet [Ludent]",
+   "imprint": "SCI;1007",
+   "tokens": {
+    "1007": 0.9538,
+    "SCI": 0.8419
+   }
+  },
+  {
+   "pill_id": "000930054_1",
+   "name": "buspirone hydrochloride 10 MG Oral Tablet",
+   "imprint": "TEVA;54",
+   "tokens": {
+    "TEVA": 0.5099,
+    "54": 0.5913
+   }
+  },
+  {
+   "pill_id": "646790929_1",
+   "name": "lisinopril 10 MG Oral Tablet",
+   "imprint": "W;929",
+   "tokens": {
+    "929": 0.9209
+   }
+  },
+  {
+   "pill_id": "005559016_2",
+   "name": "{21 (ethinyl estradiol 0.035 MG / norgestimate 0.25 MG Oral Tablet) / 7 (inert ingredients 1 MG Oral Tablet) } Pack [Sprintec 28 Day]",
+   "imprint": "b;143",
+   "tokens": {
+    "143": 0.8285
+   }
+  },
+  {
+   "pill_id": "000935454_1",
+   "name": "{28 (estradiol 0.5 MG / norethindrone acetate 0.1 MG Oral Tablet) } Pack [Mimvey Lo 28 Day]",
+   "imprint": "b;53",
+   "tokens": {
+    "53": 0.8056
+   }
+  },
+  {
+   "pill_id": "651620745_1",
+   "name": "promethazine hydrochloride 12.5 MG Oral Tablet",
+   "imprint": "AN;745",
+   "tokens": {
+    "AN": 0.6704,
+    "745": 0.8747
+   }
+  },
+  {
+   "pill_id": "634590541_1",
+   "name": "fentanyl 0.1 MG Buccal Tablet [Fentora]",
+   "imprint": "1;C",
+   "tokens": {}
+  },
+  {
+   "pill_id": "317220238_1",
+   "name": "amlodipine 5 MG Oral Tablet",
+   "imprint": "IG;238",
+   "tokens": {
+    "238": 0.9538,
+    "IG": 0.7075
+   }
+  },
+  {
+   "pill_id": "005910338_1",
+   "name": "diclofenac sodium 50 MG Delayed Release Oral Tablet",
+   "imprint": "WPI;338",
+   "tokens": {
+    "338": 0.9538,
+    "WPI": 0.6012
+   }
+  },
+  {
+   "pill_id": "634590544_1",
+   "name": "fentanyl 0.4 MG Buccal Tablet [Fentora]",
+   "imprint": "4;C",
+   "tokens": {}
+  },
+  {
+   "pill_id": "006033740_1",
+   "name": "furosemide 40 MG Oral Tablet",
+   "imprint": "3170;V",
+   "tokens": {
+    "3170": 1.0
+   }
+  },
+  {
+   "pill_id": "647640301_1",
+   "name": "pioglitazone 30 MG Oral Tablet [Actos]",
+   "imprint": "ACTOS;30",
+   "tokens": {
+    "ACTOS": 0.8571,
+    "30": 0.6642
+   }
+  },
+  {
+   "pill_id": "498840640_1",
+   "name": "methimazole 5 MG Oral Tablet",
+   "imprint": "EM;5",
+   "tokens": {
+    "EM": 0.9538
+   }
+  },
+  {
+   "pill_id": "572370077_1",
+   "name": "ondansetron 4 MG Disintegrating Oral Tablet",
+   "imprint": "5;E",
+   "tokens": {}
+  },
+  {
+   "pill_id": "004563330_1",
+   "name": "acamprosate calcium 333 MG Delayed Release Oral Tablet [Campral]",
+   "imprint": "333",
+   "tokens": {
+    "333": 0.8571
+   }
+  },
+  {
+   "pill_id": "005970152_1",
+   "name": "empagliflozin 10 MG Oral Tablet [Jardiance]",
+   "imprint": "S;10",
+   "tokens": {
+    "10": 0.5213
+   }
+  },
+  {
+   "pill_id": "006034211_1",
+   "name": "lisinopril 10 MG Oral Tablet",
+   "imprint": "3972;V",
+   "tokens": {
+    "3972": 1.0
+   }
+  },
+  {
+   "pill_id": "005740220_1",
+   "name": "liothyronine sodium 0.005 MG Oral Tablet",
+   "imprint": "5;220",
+   "tokens": {
+    "220": 0.9209
+   }
+  },
+  {
+   "pill_id": "005912472_1",
+   "name": "tamoxifen 10 MG Oral Tablet",
+   "imprint": "2232;WPI",
+   "tokens": {
+    "WPI": 0.6012,
+    "2232": 1.0
+   }
+  },
+  {
+   "pill_id": "498840289_1",
+   "name": "megestrol acetate 20 MG Oral Tablet",
+   "imprint": "par;289",
+   "tokens": {
+    "PAR": 0.6769,
+    "289": 1.0
+   }
+  },
+  {
+   "pill_id": "000095012_1",
+   "name": "miglitol 25 MG Oral Tablet [Glyset]",
+   "imprint": "GLYSET;25",
+   "tokens": {
+    "GLYSET": 1.0,
+    "25": 0.5897
+   }
+  },
+  {
+   "pill_id": "634020191_1",
+   "name": "eszopiclone 2 MG Oral Tablet [Lunesta]",
+   "imprint": "S191",
+   "tokens": {
+    "S191": 1.0
+   }
+  },
+  {
+   "pill_id": "000932204_1",
+   "name": "metoclopramide 5 MG Oral Tablet",
+   "imprint": "BL;92",
+   "tokens": {
+    "BL": 0.9538,
+    "92": 0.8285
+   }
+  },
+  {
+   "pill_id": "317220201_1",
+   "name": "fosinopril sodium 20 MG Oral Tablet",
+   "imprint": "201;IG",
+   "tokens": {
+    "201": 0.8747,
+    "IG": 0.7075
+   }
+  }
+ ],
+ "catalogue_size": 4936
+}
