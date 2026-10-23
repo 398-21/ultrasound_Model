@@ -123,9 +123,11 @@ Last checked: 2026-10-06.
         2026-10-07): 133,458 images after dropping 316 repeated entries.
     - Attribute coverage for the 2,362 consumer NDC9: shape, colour, size 100%; imprint 99.7%.
     - 227 types are two-tone.
-  - [x] Crops (`scripts/crop_c3pi.py`, 2026-10-07): 40,550 of 40,587 photos in `data/interim/c3pi/crops/`
-        (384 px), about 97% clean by eye; details in the progress log.
-  - [ ] Dedup and splits, with a leakage report (gate G2).
+  - [x] Crops (`scripts/crop_c3pi.py`, 2026-10-07): all 40,587 distinct photos were successfully cropped
+        into `data/interim/c3pi/crops/` (384 px) after the cropper correction and re-cropping.
+  - [x] Dedup and splits: 40,587 photos in 2,338 appearance groups, with 1,710 training, 214 validation-enrolled,
+        214 validation-unknown and 200 held-out groups. Counts reconciled in the author-supplied data audit
+        of 2026-10-23; source artifacts are the crop and split summaries and manifest.
   - [ ] The NLM Pillbox archive isn't hosted at `data.lhncbc.nlm.nih.gov/public/` anymore. For attributes of
         the ePillID reference-only types, use `rximage.zip` metadata or DailyMed product labels.
 

@@ -1,21 +1,62 @@
-\section{Data inventory and qualitative examples}
+\section{Data inventory and evaluation subsets}
 \label{app:data}
-The inventory of consumer images contains 40,587 records, matching the sum of the four partition counts in Table~\ref{tab:data}, whereas 40,550 successful crops are reported. Split generation filters \texttt{crops.csv} to successful detections before assigning partitions and writes \texttt{manifest.csv} and \texttt{summary.json}, but these generated files are absent from the available checkout. Consequently, the available records do not establish whether the discrepancy reflects different preprocessing revisions, and the partition counts remain reported values pending reconciliation with the manifest for the run and crop log.
+The count reconciliation in Table~\ref{tab:data-counts} separates repeated file-list entries, changes in identity units and deliberate exclusions from individual evaluation subsets. All 40,587 distinct C3PI consumer photographs are retained after successful cropping, and their partition counts sum to the same total. The earlier shortfall arose from the initial cropper and was resolved by re-cropping after its correction on 7 October 2026.
 
-The MEDISEG inventory similarly distinguishes 14,069 annotated instances from 13,973 evaluated queries. The source paper reports 8,262 images~\citep{chu2026mediseg}, whereas the local retained set contains 8,261. Download and preprocessing records are described in \texttt{epills/docs/datasets.md}. Representative views of the same identity are shown in the main text, Figure~\ref{fig:examples}.
+\begin{table}[!htbp]
+\centering\small
+\caption{Source counts and counts used in the study. Differences reflect duplicate entries, identity consolidation or evaluation eligibility. MEDISEG enrolment instances are reserved from the query set.}
+\label{tab:data-counts}
+\begin{tabular}{@{}p{0.25\linewidth}rrp{0.39\linewidth}@{}}
+\toprule
+Unit & Source & Used & Explanation \\
+\midrule
+C3PI consumer entries & 40,882 & 40,587 & 295 repeated entries removed \\
+NDC11 plus part & 2,432 & 2,400 & Package variants consolidated as NDC9 plus part \\
+Appearance groups & 2,400 & 2,338 & 111 pill types combined into 49 shared groups \\
+Imprint-analysis photos & 7,111 & 7,068 & 43 photos lack recorded imprint text \\
+MEDISEG query pills & 14,069 & 13,973 & 96 instances reserved for enrolment \\
+ePillID two-sided types & 192 & 145 & 47 types have photographs of one side only \\
+\bottomrule
+\end{tabular}
+\end{table}
 
+\paragraph{Product identities and appearance groups.} The 2,432 combinations of NDC11 and product part reduce to 2,400 pill types when package codes are consolidated. For example, Avelox 400\,mg appears under two package codes although the tablet is unchanged (Figure~\ref{fig:count-examples}a). Further consolidation by recorded imprint, shape, colour and size combines 111 pill types into 49 shared groups, yielding $2,400-111+49=2,338$ appearance groups. Partitioning uses these groups, so types with matching recorded appearance are kept together (Figure~\ref{fig:counts-flow}). The original distribution plot is retained in Figure~\ref{fig:data-statistics}.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.96\linewidth,height=0.30\textheight,keepaspectratio]{figD1_c3pi_counts_flow.pdf}
+\caption{C3PI processing from the source file list to pill types, appearance groups and partitions. Removal of repeated entries leaves 40,587 distinct photographs, all of which are successfully cropped and assigned to partitions. Consolidation of package variants and matching appearance changes the identity count without discarding photographs.}
+\label{fig:counts-flow}
+\end{figure}
+
+\paragraph{Imprint-analysis eligibility.} Of 7,111 validation photographs, 43 belong to three medicines without recorded imprint text and are excluded only from the imprint-recovery analysis. Staxyn 10\,mg and a magnesium oxide 400\,mg tablet carry no imprint, while Prandin 2\,mg carries a logo rather than characters (Figure~\ref{fig:count-examples}c). The resulting 7,068 photographs form the denominator of the stratified recovery analysis in Figure~\ref{fig:imprint}, while all validation photographs remain available for the other evaluations.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.94\linewidth,height=0.26\textheight,keepaspectratio]{figD2_count_examples.pdf}
+\caption{C3PI examples underlying identity consolidation and imprint-analysis eligibility. (a) The same tablet under different package codes. (b) Products with matching recorded appearance grouped into one class. (c) Three validation medicines without recorded imprint text, including a tablet carrying a logo.}
+\label{fig:count-examples}
+\end{figure}
+
+\paragraph{MEDISEG enrolment and queries.} The released archive contains 8,261 images and 14,069 annotated pills. Evaluation with all 32 products enrolled reserves three single-pill photographs per product, leaving $14,069-32\times3=13,973$ query instances. The source paper reports 8,262 images~\citep{chu2026mediseg}, one more than the released archive, whose images are all retained. The 13,973-query count concerns this evaluation with all products enrolled. Simulated personal galleries select enrolment photographs separately for each gallery, as described in Section~\ref{sec:setup}.
+
+\paragraph{ePillID query eligibility.} Figure~\ref{fig:examples}b summarises the availability of paired views underlying the evaluation subset in Section~\ref{sec:epillid}. Missing views restrict eligibility for the two-sided metric without removing those medicines from the single-photo evaluation.
+
+
+
+\paragraph{C3PI holdout expansion.} The ePillID holdout types correspond to 189 product codes and 204 C3PI pill types. Reserving another 14 types with matching recorded appearance gives 218 pill types in 200 C3PI test groups, containing 4,005 photographs.
 
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=0.94\linewidth,height=0.25\textheight,keepaspectratio]{fig03_data_statistics.pdf}
-  \caption{Statistics for C3PI consumer images reproduced from the supplied project materials. (a) Reported images per pill type, defined by NDC9 and product part, with counts of 60 or more pooled in the final bin. (b) Reported partition sizes and counts of appearance groups. Types sharing recorded imprint, shape, colour and size are assigned to the same group, and each group is assigned to one partition. Groups containing an ePillID fold-4 holdout identity form the held-out test partition. The image counts total 40,587 and remain unreconciled with the reported 40,550 successful crops.}
+  \caption{C3PI consumer-image distribution and partitions. (a) Images per pill type, defined by NDC9 and product part, with counts of 60 or more pooled in the final bin. (b) Partition sizes and appearance-group counts. All 40,587 distinct photographs are included, and groups containing an ePillID fold-4 holdout identity are reserved for testing.}
   \label{fig:data-statistics}
 \end{figure}
 
 \FloatBarrier
 \section{Architecture and training configuration}
 \label{app:configuration}
-The main training schedule and augmentation are specified in Section~\ref{sec:training}. Table~\ref{tab:arch} lists the layer configuration during inference. Layers after the pretrained backbones use Glorot-uniform initialisation.
+The main training schedule and augmentation are specified in Section~\ref{sec:training}. Table~\ref{tab:arch} lists the layer configuration during inference. Dense layers and the CBAM spatial convolution use Glorot-uniform weights with zero biases, while learned token positions are initialised uniformly in $[-0.05,0.05]$.
 
 \begin{table}[!htbp]
   \caption{The network's layers (inference mode). Pretrained weights: VGG16 on ImageNet, ViT-B/16 on ImageNet-21k.}
@@ -30,7 +71,7 @@ The main training schedule and augmentation are specified in Section~\ref{sec:tr
     ViT branch & ViT-B/16 (\texttt{vit-base-patch16-224-in21k}), pooler output & 768 \\
     Capsule fusion & per branch: Dense 256, ReLU, dropout 0.4, Dense 256, batch norm; dynamic routing, 2 iterations,
       residual update & 256 \\
-    Refinement & 4 tokens $\times$ 64 + learned positions; 2 post-norm encoder layers (4 heads, feed-forward width 128, dropout
+    Refinement & 4 tokens $\times$ 64 + learned positions; 2 post-norm encoder layers (4 heads with 64 dimensions each, feed-forward width 128, dropout
       0.4); mean pool & 64 \\
     Embedding head & Linear, $\ell_2$ normalisation & 256 \\
     Auxiliary heads & shape (softmax), colour (multi-label sigmoid) & -- \\
@@ -38,16 +79,20 @@ The main training schedule and augmentation are specified in Section~\ref{sec:tr
   \end{tabular}
 \end{table}
 
+\paragraph{Input normalisation.} Each RGB crop is converted to a floating-point tensor in $[0,1]$ before branch-specific normalisation is applied inside the model. For channel $c$, the VGG16 input is $(x_c-\mu_c)/\sigma_c$, with $\boldsymbol{\mu}=(0.485,0.456,0.406)$ and $\boldsymbol{\sigma}=(0.229,0.224,0.225)$ in RGB order. The ViT input is $(x_c-0.5)/0.5$, mapping the same crop to $[-1,1]$. This processing is shared by training, evaluation and serving through the model's feature-extraction function.
+
+\paragraph{Refinement attention.} Each of the two refinement layers uses four attention heads with 64 dimensions per head for queries, keys and values. The implementation follows Keras attention semantics: a token of width 64 is projected separately to 256 query, key and value coordinates, which are split across the four heads. Attention scores are scaled by $1/\sqrt{64}$, and the concatenated 256-dimensional head outputs are projected back to token width 64 before the residual connection. Mean pooling across the four refined tokens therefore produces a 64-dimensional vector for the final embedding head.
+
 \FloatBarrier
 \section{Calibration and training diagnostics}
 \label{app:calibration}
 The main evaluation uses rejection, ambiguity and imprint re-ranking parameters selected on validation data. Calibration curves, sequential training changes and training trajectories are collected here to distinguish the selection procedure from the held-out results.
 
-The project plan defines validation targets for a gallery of ten medicines enrolled from three photographs per medicine (Table~\ref{tab:targets}). These are development criteria, not held-out performance claims. In particular, top-1 within the gallery, correct naming at a rejection operating point, and acceptance of foreign queries are distinct measures. Held-out results are reported separately in Table~\ref{tab:main}.
+The project plan defines validation targets for a gallery of ten medicines enrolled from three photographs per medicine (Table~\ref{tab:targets}). These are development criteria, not held-out performance claims. In particular, top-1 within the gallery and correct or incorrect accepted identities among enrolled queries are distinct measures. Held-out results are reported separately in Table~\ref{tab:main}.
 
 \begin{table}[!htbp]
 \centering\small
-\caption{Validation targets from the project plan and reported measurements for run 4. These measurements concern validation galleries, with held-out results reported separately.}
+\caption{Validation targets from the project plan and reported measurements for run 4. These training-time diagnostics use validation galleries and a threshold set for 95\% foreign-query rejection, without the final retake margin. Held-out results are reported separately.}
 \label{tab:targets}
 \begin{tabular}{@{}lrr@{}}
 \toprule
@@ -107,7 +152,7 @@ Misidentification rate among enrolled queries & $\le 2\%$ & 1.2\% \\
 \label{app:errors}
 \label{sec:errors}
 
-\paragraph{Stratified analysis of imprint reading.} Figure~\ref{fig:imprint} reports validation recovery by recorded imprint type, rater visibility, size and shape. The source analysis uses 7,068 photographs of medicines with a recorded imprint. The corresponding interpretation is given in Section~\ref{sec:error-analysis}.
+\paragraph{Stratified analysis of imprint reading.} Figure~\ref{fig:imprint} reports validation recovery by recorded imprint type, rater visibility, size and shape. The source analysis uses 7,068 photographs with recorded imprint text, as specified in Appendix~\ref{app:data}. The corresponding interpretation is given in Section~\ref{sec:error-analysis}.
 
 \begin{figure}[!htbp]
   \centering
@@ -121,7 +166,7 @@ Misidentification rate among enrolled queries & $\le 2\%$ & 1.2\% \\
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.92\linewidth,height=0.23\textheight,keepaspectratio]{fig16_lookalike_error_analysis.pdf}
+  \includegraphics[width=\linewidth]{fig16_lookalike_error_analysis.pdf}
   \caption{Look-alikes, with both medicines enrolled in one gallery. (a) Rates of wrong naming by kind of pair, look only
     and with the imprint check. (b) The worst pairs from the same manufacturer.}
   \label{fig:lookalike}
@@ -159,6 +204,8 @@ Misidentification rate among enrolled queries & $\le 2\%$ & 1.2\% \\
 
 The implementation environment reported in the project materials is Python 3.13.15, PyTorch 2.11.0 with CUDA 12.8, and Hugging Face Transformers 5.19.0. Training uses one NVIDIA RTX 4080 SUPER with 16\,GB memory. The pipeline exposes separate stages for partitioning, training, gallery calibration, held-out evaluation, catalogue re-ranking and confidence calibration. The corresponding scripts write configuration, calibration and evaluation records to the run directory.
 
+The model implementation uses PyTorch and Hugging Face Transformers\footnote{\url{https://github.com/huggingface/transformers}}, with reused project and benchmark code identified in Section~\ref{sec:approach}. The research-paper-writing skill was used for language polishing.
+
 With the project environment activated, the following PowerShell commands are run from \texttt{epills/}. They reproduce the documented sequence when the required datasets, reference catalogue and cached OCR outputs have been prepared as described in the repository. 
 
 \begin{quote}\small
@@ -195,6 +242,3 @@ Care agent source & \url{https://github.com/SpectateurLinlan/pharmascan-care-age
 \bottomrule
 \end{tabular}
 \end{table}
-
-\subsection{Source attribution and report preparation}
-The model implementation uses PyTorch and Hugging Face Transformers\footnote{\url{https://github.com/huggingface/transformers}}, with reused project and benchmark code identified in Section~\ref{sec:approach}. The research-paper-writing skill was used for language polishing.

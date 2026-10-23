@@ -9,8 +9,7 @@
 \subsection{Setup}
 \label{sec:setup}
 
-\paragraph{Test sets.} No test medicine appears in training in any form, and every setting is fixed on validation
-before a test set is scored, once. \emph{C3PI held-out}: 4,005 photos of 200 appearance groups (the medicines of
+\paragraph{Test sets.} In the strict C3PI evaluation, test identities are excluded from training. The separate ePillID benchmark permits references for test types during training while excluding validation groups. Settings are selected on validation data before held-out evaluation. \emph{C3PI held-out}: 4,005 photos of 200 appearance groups (the medicines of
 ePillID's official holdout fold and their look-alikes), photographed like the training data.
 \emph{MEDISEG}~\citep{mediseg2026}: 13,973 pills of 32 Hong Kong products, taken with other phones and in cluttered
 scenes; median pill size 81\,px. \emph{ePillID}~\citep{usuyama2020epillid}: the published benchmark (fold 4,
@@ -19,7 +18,7 @@ two-sided queries against references of all 4,902 types).
 \paragraph{Healthcare-relevant metrics.} We simulate patients with 10 enrolled medicines (3 photos each). For the
 patient's own pills we report the share \emph{named correctly}, \emph{named wrongly} (the safety-critical error),
 \emph{retake} and \emph{called unknown}; for pills that are not theirs, the share \emph{rejected}. A wrong name may be
-acted on, whereas ``unknown'' only costs time, so wrong names matter most. We also report top-$k$ accuracy, AUROC,
+acted on, while unknown and retake decisions create a further checking burden. We also report top-$k$ accuracy, AUROC,
 ePillID's MAP and GAP, and the reliability of the stated confidence. 95\% intervals come from resampling medicines.
 
 \paragraph{Baselines.} (i) Run 1: the same network with a common recipe (new layers at $10^{-3}$, no margin
@@ -87,15 +86,14 @@ alone. Adding reference photos (run 3) nearly tripled ePillID MAP@1 (13.7$\to$37
   \includegraphics[width=\linewidth]{fig08_open_set_outcomes.pdf}
   \caption{What the patient sees (run 4, embedding only; 10 medicines, 3 enrolment photos). Small shares are listed
     after each bar in legend order. In C3PI conditions most own pills are named correctly and wrong names are rare;
-    on other phones the threshold transfers badly and most own pills are called unknown, which is safe but
-    unhelpful.}
+    on other phones the threshold transfers badly and most own pills are called unknown, which limits useful recognition.}
   \label{fig:openset}
 \end{figure}
 
 \subsection{Ablations and hyperparameters}
 \label{sec:ablations}
 
-Table~\ref{tab:ablation} isolates each design decision. The learning rates matter most. With the new layers at
+Table~\ref{tab:ablation} reports sequential design changes. The combined optimisation changes produce the largest observed improvement. With the new layers at
 $10^{-3}$ the embedding collapses to about 3 effective dimensions and validation top-1 stalls at 77\%, while lower rates
 keep 12--15 dimensions and reach 98\% (Figure~\ref{fig:training}). The decision settings are smooth
 (Figure~\ref{fig:calib}): the crop window moves correct names by under one point, and the margin trades correct names
@@ -149,8 +147,7 @@ read (Figure~\ref{fig:identify}a).
 \label{sec:robustness}
 
 \emph{Other phones} are the main weakness (Table~\ref{tab:main}, Figure~\ref{fig:openset}). On MEDISEG, top-1 drops to
-48\% and the C3PI-calibrated threshold calls 70\% of own pills unknown, though wrong names stay below 1\%: the system
-fails safe but is not yet usable there. Small pills are the main factor (Figure~\ref{fig:robust}a: 36--37\% top-1 under
+48\% and the C3PI-calibrated threshold calls 70\% of own pills unknown, though wrong names stay below 1\%: useful recognition remains limited. Small pill size is associated with lower accuracy (Figure~\ref{fig:robust}a: 36--37\% top-1 under
 100\,px, 62\% above), and more enrolment photos help only partly (Figure~\ref{fig:robust}b). \emph{Pills outside the
 catalogue}: 69.8\% of MEDISEG pills get \emph{no confident match} and 7.0\% \emph{possible match}, while 75.8\% of
 catalogue pills get \emph{possible match}, and the stated confidence tracks observed accuracy
@@ -176,16 +173,14 @@ and wrong names do not rise (Table~\ref{tab:main}).
 \subsection{Comparison with the ePillID benchmark}
 \label{sec:epillid}
 
-For a like-for-like comparison, runs 5--7 follow ePillID's protocol and train on the references of all types
-(Table~\ref{tab:epillid}, Figure~\ref{fig:epillid}). Our embedding alone (MAP 0.57--0.60) is in the range of the
+Runs 5--7 permit references for test types during training while excluding validation groups and types matching their recorded appearance. Retrieval uses the full gallery of 4,902 types (Table~\ref{tab:epillid}, Figure~\ref{fig:epillid}). Our embedding alone (MAP 0.57--0.60) is in the range of the
 paper's plain classifiers, not its best model. Re-ranking by imprint, which the paper's model did not use, raises MAP
 to 0.77--0.78 and GAP@1 to 0.921, above the paper's 0.912, while MAP@1 stays lower (69.0 vs.\ 92.0\%). The paper's
-ablations attribute its advantage to its training recipe (contrastive and hard-mined triplet losses with softmax and
-ArcFace over side-specific classes, a 2,048-d embedding) rather than its backbone. We ruled out our crop style, the
-64-d pooling, and local versus global pooling as causes.
+ablations associate its advantage with its training recipe (contrastive and hard-mined triplet losses with softmax and
+ArcFace over side-specific classes, a 2,048-d embedding) alongside its backbone. Additional comparisons of crop style, the 64-d pooling step and local versus global pooling did not recover the performance gap.
 
 \begin{table}[t]
-  \caption{ePillID, official protocol (fold 4, two-sided). The best published model is a ResNet-152 with compact
+  \caption{ePillID benchmark (fold 4, two-sided queries). Training permits references for test types while excluding validation groups. The best published model is a ResNet-152 with compact
     bilinear pooling and multi-head metric learning. ``+ imprint'' uses OCR information the published models did not
     use.}
   \label{tab:epillid}
@@ -245,7 +240,7 @@ pairs share Teva's `TV', e.g.\ tramadol 50\,mg (TV;58) and carvedilol 12.5\,mg (
 (Figure~\ref{fig:tsne}), and the calibrated threshold separates a photo's similarity to its own medicine from its
 similarity to the closest of nine others (Figure~\ref{fig:sim}). Tracing the served model on single photos shows two
 things. Capsule routing moves from equal weights to about 9\% CNN and 91\% ViT, and the refinement block's token
-attention is nearly uniform, consistent with that block not being a bottleneck. Overall, the hybrid learns an
+attention is nearly uniform for the traced queries. These observations do not isolate the contributions of individual branches or the refinement block. Overall, the hybrid learns an
 embedding that transfers to unseen medicines when it is trained with the right learning rates. Calibration gives
 predictable behaviour on new medicines in familiar conditions but not across phones, and the imprint is evidence that
 complements the look.
@@ -303,4 +298,3 @@ the API's 92 tests. Tests and review caught real defects, among them a safety bu
 extended-release sticker to the immediate-release product; we fixed it by enforcing the release form. Our safeguards
 against over-trusting generated code were procedural: settings were chosen on validation, each test set was scored
 once, and every number in this paper is read from a file written by a script.
-% [TO DO: the team decides how to evidence tool use (PROGRESS_LOG.md, git history); do not create mock logs.]

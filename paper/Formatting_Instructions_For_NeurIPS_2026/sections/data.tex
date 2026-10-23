@@ -1,15 +1,15 @@
 \paragraph{Training source and identity units.}
-The primary source is the National Library of Medicine (NLM) Computational Photography Project for Pill Identification (C3PI) collection~\citep{yaniv2016nlm}. Its local inventory contains 40,587 distinct consumer photographs and 40,550 reported successful crops. Pill types, defined by nine-digit National Drug Code (NDC9) and product part, are combined into an \emph{appearance group} when recorded imprint, shape, colour and size agree, while types without an imprint remain separate. These groups define training labels and partition membership, with product identities retained for catalogue candidates.
+The primary source is the National Library of Medicine (NLM) Computational Photography Project for Pill Identification (C3PI) collection~\citep{yaniv2016nlm}. Its consumer-image list contains 40,882 entries, including 295 exact repeats, leaving 40,587 distinct photographs that were successfully cropped and assigned to partitions. Pill types are defined by nine-digit National Drug Code (NDC9) and product part, giving 2,400 types after package variants are consolidated. Types sharing recorded imprint, shape, colour and size form an \emph{appearance group}, while those without imprint text remain separate. The resulting 2,338 groups define training labels and partition membership, with product identities retained for catalogue retrieval.
 
-The supplied distribution plot is retained in Appendix~\ref{app:data}, Figure~\ref{fig:data-statistics}. Consumer photographs are unevenly distributed across medicines, with a median of 15 images per medicine and a range of 3--101 in the source inventory's NDC9-level summary. Illumination, orientation, visible side and background vary within an identity. Studio photographs offer a more consistent reference view but differ from consumer queries in framing and image quality. Consumer crops supply acquisition variation during representation learning. Studio references support catalogue matching and, for training groups only, also augment representation learning in runs 3 and 4. Grouping product records with matching metadata reduces duplicated visual identities, including repackaged variants where the recorded attributes agree.
+Consumer photographs vary in illumination, orientation, visible side and background, with a median of 15 images per medicine and a range of 3--101 in the inventory's NDC9 summary. Studio references provide more consistent views for catalogue matching and augment training groups in runs 3 and 4. Appendix~\ref{app:data} details the count reconciliation, package variants and grouping process, together with the distribution plot in Figure~\ref{fig:data-statistics}.
 
 \begin{table}[!htbp]
 \centering\small
-\caption{Reported C3PI partition counts. Their total differs from the reported number of successful crops and remains to be reconciled. Studio references add 6,198 training crops in runs 3 and 4.}
+\caption{C3PI partitions after removal of repeated entries and successful cropping of all 40,587 distinct consumer photographs. Studio references add 6,198 training crops in runs 3 and 4.}
 \label{tab:data}
 \begin{tabular}{@{}lrrl@{}}
 \toprule
-Partition & Groups & Records & Role \\
+Partition & Groups & Crops & Role \\
 \midrule
 Training & 1,710 & 29,471 & Representation learning \\
 Validation enrolled & 214 & 3,556 & Selection and enrolment \\
@@ -20,20 +20,28 @@ Held-out test & 200 & 4,005 & Evaluation on unseen groups \\
 \end{table}
 
 \paragraph{Partitioning and preprocessing.}
-Groups containing an ePillID fold-4 holdout identity are reserved through NDC9 matching. Remaining groups are randomly divided approximately 80:10:10 between training and the two validation partitions (Table~\ref{tab:data}). Code for split generation checks shared identifiers, exact duplicates and near-duplicate crops. Only references for training groups are added in runs 3 and 4. The discrepancy between inventory and crop counts is documented in Appendix~\ref{app:data}. Each detected pill is framed in a square window of 1.55 times the long side of its bounding box and resized to $224\times224$ pixels. Training augmentation is specified in Section~\ref{sec:training}. Figure~\ref{fig:examples} provides representative views.
+Groups containing an ePillID fold-4 holdout identity are reserved through NDC9 matching. Remaining groups are randomly divided approximately 80:10:10 between training and the two validation partitions (Table~\ref{tab:data}). Code for split generation checks shared identifiers, exact duplicates and near-duplicate crops. Only references for training groups are added in runs 3 and 4. Each detected pill is framed in a square window of 1.55 times the long side of its bounding box and resized to $224\times224$ pixels. VGG16 inputs use ImageNet channel statistics, while ViT inputs are scaled to $[-1,1]$, with constants given in Appendix~\ref{app:configuration}. Training augmentation is specified in Section~\ref{sec:training}. Figure~\ref{fig:examples} provides representative views.
 
 
 
 \begin{figure}[!htbp]
-\centering\includegraphics[width=0.68\linewidth,height=0.19\textheight,keepaspectratio]{fig04_qualitative_examples.pdf}
-\caption{Catalogue references and consumer views of validation medicines. Orientation, visible side and illumination vary within an identity. Imprints are not readable in every view.}
+\centering
+\begin{minipage}[t]{0.48\linewidth}
+\vspace{0pt}\centering
+\textbf{(a) C3PI image variation}\\[3pt]
+\includegraphics[width=\linewidth]{fig04_qualitative_examples.pdf}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\vspace{0pt}\centering
+\textbf{(b) ePillID side coverage}\\[3pt]
+\includegraphics[width=\linewidth]{figD4_epillid_sides_compact.pdf}
+\end{minipage}
+\caption{Data characteristics. (a) Catalogue references and four consumer photographs for each of four medicines illustrate variation in orientation, visible side and illumination. (b) ePillID fold-4 coverage by side availability, shown for pill types and photographs.}
 \label{fig:examples}
 \end{figure}
 
 \paragraph{Evaluation sources and catalogue.}
-The C3PI holdout comprises 200 appearance groups, whereas the local ePillID release contains 13,532 images of 4,902 types, including 9,804 references and 3,728 consumer images. Of these identities, 192 with consumer images belong to fold 4~\citep{usuyama2020epillid}. The official ePillID protocol permits reference images for test types during training, distinguishing it from the strict C3PI evaluation. MEDISEG~\citep{mediseg2026} contributes 8,261 images of 32 Hong Kong products and 13,973 evaluated pill instances from an inventory of 14,069 annotations. The median pill long side is 81 pixels, with fifth and 95th percentiles of 27 and 194 pixels in $640\times640$ images. A separate deployment subset has 40 query pills. Product population, scale, cameras and clutter change together, so the external gap cannot be attributed to camera hardware alone. Catalogue identification uses 4,936 US products assembled from C3PI reference images and imprint, shape and colour metadata.
-
-C3PI tests identity transfer under familiar acquisition conditions, ePillID tests consumer-to-reference retrieval, and MEDISEG changes both products and acquisition. A pill outside a patient's gallery may still have a catalogue reference, so gallery rejection and catalogue coverage are evaluated separately.
+The C3PI holdout comprises 200 appearance groups, whereas the local ePillID release contains 13,532 images of 4,902 types, including 9,804 references and 3,728 consumer images. Fold 4 contains 745 consumer photographs of 192 identities~\citep{usuyama2020epillid}. The official ePillID protocol permits reference images for test types during training, distinguishing it from the strict C3PI evaluation. MEDISEG~\citep{mediseg2026} contributes 8,261 images with 14,069 annotated pills from 32 Hong Kong products. For evaluation with all products enrolled, three single-pill photographs per product form the gallery, leaving 13,973 query pills after 96 enrolment instances are excluded. The median pill long side is 81 pixels, with fifth and 95th percentiles of 27 and 194 pixels in $640\times640$ images. A separate deployment subset has 40 query pills. Product population, scale, cameras and clutter change together, so the external gap cannot be attributed to camera hardware alone. Catalogue identification uses 4,936 US products assembled from C3PI reference images and imprint, shape and colour metadata.
 
 \paragraph{Data use.}
 The study uses public image datasets without patient records. C3PI images are restricted to research and development, including when accessed through ePillID, whose MIT code licence does not supersede the image conditions. MEDISEG is distributed under CC BY 4.0, and download instructions for all sources are provided in \texttt{epills/docs/datasets.md}.

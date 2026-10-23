@@ -6,7 +6,7 @@
 \section{Experiments}
 \label{sec:experiments}
 
-\subsection{Experimental setup}
+\subsection{Data and evaluation setup}
 \label{sec:setup}
 
 \input{sections/data}
@@ -71,7 +71,7 @@ the remainder request a retake (approximately 1.7\%, inferred from rounded repor
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.92\linewidth,height=0.23\textheight,keepaspectratio]{fig08_open_set_outcomes.pdf}
+  \includegraphics[width=\linewidth]{fig08_open_set_outcomes.pdf}
   \caption{What the patient sees (run 4, embedding only, 10 medicines, 3 enrolment photos). Small shares are listed
     after each bar in legend order. In C3PI conditions most own pills are named correctly and wrong names are rare;
     under acquisition shift the threshold transfers poorly and most own pills are called unknown, which limits useful recognition.}
@@ -124,7 +124,9 @@ Catalogue verdicts also differ across sources, with 69.8\% of MEDISEG pills rece
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.92\linewidth,height=0.23\textheight,keepaspectratio]{fig13_identify_confidence.pdf}
+  % Match Figure 5's rendered width while preserving this figure's aspect ratio.
+  \sbox0{\includegraphics[width=0.92\linewidth,height=0.23\textheight,keepaspectratio]{fig09_robustness.pdf}}
+  \includegraphics[width=\wd0]{fig13_identify_confidence.pdf}
   \caption{Calibrated confidence for identification. (a) Stated confidence against observed accuracy on held-out
     medicines. (b) Verdicts for catalogue pills and for pills not in the catalogue (MEDISEG).}
   \label{fig:confidence}
@@ -134,11 +136,13 @@ Catalogue verdicts also differ across sources, with 69.8\% of MEDISEG pills rece
 \subsection{Comparison with the ePillID benchmark}
 \label{sec:epillid}
 
+The two-sided evaluation averages scores across each front--back pair and includes 626 pairs from 145 types with both sides photographed. The other 47 fold-4 types remain included in the single-photo evaluation; side coverage is shown in Figure~\ref{fig:examples}b.
+
 With one relevant identity per query, MAP corresponds to mean reciprocal rank and MAP@1 to the fraction ranked first. 
 In contrast, GAP pools query--candidate scores before calculating average precision, while GAP@1 evaluates top-ranked predictions ordered by score. 
 Consequently, a gain in GAP@1 can coexist with lower top-1 accuracy because the measures capture different aspects of ranking and confidence.
 
-For a like-for-like comparison, runs 5--7 use an ePillID-style setting that permits test-type references during training while excluding the validation group. The full reference gallery is used at retrieval time (Table~\ref{tab:epillid}).
+Runs 5--7 use the ePillID reference-access setting, permitting references for test types during training while excluding validation groups and types that match their recorded appearance. Retrieval uses the full gallery of 4,902 types (Table~\ref{tab:epillid}).
 The embedding alone (MAP 0.57--0.60) falls within the range of the published plain classifiers and remains below the strongest model. 
 Re-ranking by imprint, which the paper's model did not use, raises MAP to 0.77--0.78 and GAP@1 to 0.921, above the paper's 0.912, while MAP@1 stays lower (69.0 vs.\ 92.0\%). 
 The paper's ablations associate its advantage with its training recipe (contrastive and hard-mined triplet losses with softmax and
@@ -146,7 +150,7 @@ ArcFace over side-specific classes, a 2,048-d embedding) alongside its backbone.
 Additional diagnostic comparisons did not recover the gap through crop style, the 64-d pooling step, or local versus global pooling alone.
 
 \begin{table}[!htbp]
-  \caption{ePillID, official protocol (fold 4, two-sided). The best published model is a ResNet-152 with compact
+  \caption{ePillID benchmark (fold 4, two-sided queries). Runs 5--7 permit test-type references during training but exclude validation groups. The best published model is a ResNet-152 with compact
     bilinear pooling and multi-head metric learning. ``+ imprint'' uses OCR information the published models did not
     use.}
   \label{tab:epillid}

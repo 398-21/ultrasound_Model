@@ -7,7 +7,7 @@
 
 A detected pill is cropped, embedded by a hybrid CNN--ViT network, and compared by cosine similarity with the
 patient's enrolled medicines or with a product catalogue. Decision thresholds are calibrated on validation medicines
-only, and an OCR imprint reader adds a second, independent check.
+only, and an OCR imprint reader supplies complementary evidence.
 
 \subsection{Network}
 \label{sec:arch}
@@ -44,13 +44,17 @@ the backbones use Glorot-uniform initialisation.
     ViT branch & ViT-B/16 (\texttt{vit-base-patch16-224-in21k}), pooler output & 768 \\
     Capsule fusion & per branch: Dense 256, ReLU, dropout 0.4, Dense 256, batch norm; dynamic routing, 2 iterations,
       residual update & 256 \\
-    Refinement & 4 tokens $\times$ 64 + learned positions; 2 post-norm encoder layers (4 heads, FFN 128, dropout
+    Refinement & 4 tokens $\times$ 64 + learned positions; 2 post-norm encoder layers (4 heads with 64 dimensions each, FFN 128, dropout
       0.4); mean pool & 64 \\
     Embedding head & Linear, $\ell_2$ normalisation & 256 \\
     Auxiliary heads & shape (softmax), colour (multi-label sigmoid) & -- \\
     \bottomrule
   \end{tabular}
 \end{table}
+
+\paragraph{Input normalisation.} Each RGB crop is converted to a floating-point tensor in $[0,1]$ before branch-specific normalisation is applied inside the model. For channel $c$, the VGG16 input is $(x_c-\mu_c)/\sigma_c$, with $\boldsymbol{\mu}=(0.485,0.456,0.406)$ and $\boldsymbol{\sigma}=(0.229,0.224,0.225)$ in RGB order. The ViT input is $(x_c-0.5)/0.5$, mapping the same crop to $[-1,1]$. This processing is shared by training, evaluation and serving through the model's feature-extraction function.
+
+\paragraph{Refinement attention.} Each of the two refinement layers uses four attention heads with 64 dimensions per head for queries, keys and values. The implementation follows Keras attention semantics: a token of width 64 is projected separately to 256 query, key and value coordinates, which are split across the four heads. Attention scores are scaled by $1/\sqrt{64}$, and the concatenated 256-dimensional head outputs are projected back to token width 64 before the residual connection. Mean pooling across the four refined tokens therefore produces a 64-dimensional vector for the final embedding head.
 
 \subsection{Training}
 \label{sec:training}
@@ -156,14 +160,3 @@ SUPER (16\,GB). The model is served as a FastAPI service on a Hugging Face ZeroG
 stage is one script in the supplementary code (\texttt{make\_splits}, \texttt{train\_stage2},
 \texttt{calibrate\_stage2}, \texttt{evaluate\_stage2}, \texttt{tune\_identify\_rerank}, \texttt{calibrate\_identify},
 \texttt{make\_paper\_figures}), and every number reported here is written to a JSON file by those scripts.
-
-\subsection{Software 3.0 contribution}
-\label{sec:sw3-approach}
-
-We used an AI coding agent, Claude Code~\citep{anthropic_claude_code}, throughout, programming in natural language in
-the sense of Software~3.0~\citep{karpathy2025software3}. It wrote the model, training, calibration and serving code
-and the evaluation scripts from our instructions; we reviewed and ran them. The effective-dimension measure in the
-training log located run 1's collapse in the new layers' learning rate, and the fix was proposed and tested in the
-same workflow. Every proposal was adopted or rejected on validation measurements, not on the agent's word: two
-imprint-reader fine-tunes it set up were rejected (Table~\ref{tab:negative}).
-% [TO DO: agree this paragraph's wording as a team; the development log is epills/PROGRESS_LOG.md.]

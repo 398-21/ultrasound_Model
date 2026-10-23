@@ -2,14 +2,14 @@
 % Section: Approach (25%). Needs: amsmath, booktabs, graphicx, natbib (the NeurIPS style loads it);
 % \graphicspath{{figures/}}; references.bib. Numbers: epills/configs/stage2_run4.yaml, outputs/runs/stage2_run4/.
 % ===================================================================================================================
-\section{Method}
+\section{Approach}
 \label{sec:approach}
 
 A detected pill is cropped, embedded by a hybrid CNN and ViT encoder, and compared by cosine similarity with the
 patient's enrolled medicines or with a product catalogue. Decision thresholds are calibrated on validation medicines
 only, and the OCR imprint reader adds complementary evidence.
 
-The implementation adapts the team's facial expression code (\texttt{FER/}) in the project repository\footnote{\url{https://github.com/398-21/ultrasound_Model}} and the ePillID benchmark code\footnote{\url{https://github.com/usuyama/ePillID-benchmark}}. Development and report preparation are documented in Appendix~\ref{app:development}.
+The implementation combines the team's model code with components adapted from the ePillID benchmark code\footnote{\url{https://github.com/usuyama/ePillID-benchmark}}. Development and report preparation are documented in Appendix~\ref{app:development}.
 
 \subsection{Network}
 \label{sec:arch}
@@ -18,7 +18,7 @@ The encoder in Figure~\ref{fig:arch} processes each $224{\times}224$ crop throug
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.98\linewidth,height=0.28\textheight,keepaspectratio]{fig02_architecture.pdf}
+  \includegraphics[width=\linewidth]{fig02_architecture.pdf}
   \caption{The hybrid network. VGG16 with CBAM attention and ViT-B/16 see the same crop. A capsule block fuses their
     features by dynamic routing and a transformer block refines the result into a unit-length 256-d embedding trained
     with ArcFace, with auxiliary shape and colour heads. Numbers on the arrows are feature sizes.}
